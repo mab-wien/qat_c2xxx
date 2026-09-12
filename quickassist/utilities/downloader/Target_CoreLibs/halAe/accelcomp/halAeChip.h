@@ -204,4 +204,8 @@ typedef struct uof_encapuwblock_s{
 
 typedef uint64 import_var_type; 
 
+int halAe_enableAutoInitSram(icp_firml_handle_t *handle, unsigned int aeMask);
+int halAe_checkAes(icp_firml_handle_t *handle, 
+               unsigned int aeMask);
+
 #endif /* __HALAECHIP_H */
