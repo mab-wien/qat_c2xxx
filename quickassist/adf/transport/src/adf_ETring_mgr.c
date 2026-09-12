@@ -388,7 +388,7 @@ STATIC CpaStatus notifyETMsg(icp_trans_handle *trans_handle)
  * for the ring is updated at the end to reflect the number of messages read.
  * If the response quota is zero, messages are read until the ring is drained.
  */
-CpaStatus notifyETMsgForPolling(icp_trans_handle *trans_handle,
+static CpaStatus notifyETMsgForPolling(icp_trans_handle *trans_handle,
                                        Cpa32U response_quota)
 {
    /*
