@@ -92,7 +92,7 @@ STATIC wireless_cy_instance_t *cy_instances[ADF_MAX_DEVICES]
 /*
  * Dummy kernelspace callback for wireless rings
  */
-void adf_dummy_callback(icp_comms_trans_handle comms_handle, void *pMsg)
+static void adf_dummy_callback(icp_comms_trans_handle comms_handle, void *pMsg)
 {
         /* The real callback lives in wireless */
         return;
