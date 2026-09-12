@@ -81,7 +81,7 @@
 #include <string.h>
 #endif
 
-#ifndef __FreeBSD__ /* FreeBSD, already defined in machine param.h */
+#ifndef PAGE_SIZE
 #define PAGE_SIZE (0x1000)
 #define PAGE_SHIFT (12)
 #endif
