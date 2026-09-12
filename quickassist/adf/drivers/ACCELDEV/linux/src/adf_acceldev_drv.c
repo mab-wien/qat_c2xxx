@@ -911,7 +911,7 @@ int adf_restore_dev(icp_accel_dev_t *accel_dev)
                 ADF_ERROR("Can not issue secondary bus reset\n");
                 ADF_ERROR("Trying FLR\n");
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31)
-                ret = __pci_reset_function(pdev);
+                ret = pci_reset_function(pdev);
                 if (ret) {
                         ADF_ERROR("Could not reset device\n");
                         return ret;

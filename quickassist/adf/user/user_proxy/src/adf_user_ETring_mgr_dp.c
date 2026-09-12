@@ -84,7 +84,7 @@
  * Data plain support function - returns the pointer to next message on the ring
  * or NULL if there is not enough space.
  */
-inline void icp_adf_getQueueMemory(icp_comms_trans_handle trans_hnd,
+void icp_adf_getQueueMemory(icp_comms_trans_handle trans_hnd,
                                    Cpa32U numberRequests,
                                    void** pCurrentQatMsg)
 {
@@ -114,7 +114,7 @@ inline void icp_adf_getQueueMemory(icp_comms_trans_handle trans_hnd,
  * Data plane support function - returns the pointer to next message on the ring
  * or NULL if there is not enough space - it also updates the shadow tail copy.
  */
-inline void icp_adf_getSingleQueueAddr(icp_comms_trans_handle trans_hnd,
+void icp_adf_getSingleQueueAddr(icp_comms_trans_handle trans_hnd,
         void** pCurrentQatMsg)
 {
     adf_dev_ring_handle_t *pRingHandle = (adf_dev_ring_handle_t *)trans_hnd;
@@ -147,7 +147,7 @@ inline void icp_adf_getSingleQueueAddr(icp_comms_trans_handle trans_hnd,
  * Data plain support function - increments the tail pointer and returns
  * the pointer to next message on the ring.
  */
-inline void icp_adf_getQueueNext(icp_comms_trans_handle trans_hnd,
+void icp_adf_getQueueNext(icp_comms_trans_handle trans_hnd,
                                  void** pCurrentQatMsg)
 {
     adf_dev_ring_handle_t *pRingHandle = (adf_dev_ring_handle_t *)trans_hnd;
@@ -168,7 +168,7 @@ inline void icp_adf_getQueueNext(icp_comms_trans_handle trans_hnd,
  * icp_adf_updateQueueTail
  * Data plain support function - Writes the tail shadow copy to the device.
  */
-inline void icp_adf_updateQueueTail(icp_comms_trans_handle trans_hnd)
+void icp_adf_updateQueueTail(icp_comms_trans_handle trans_hnd)
 {
     adf_dev_ring_handle_t *pRingHandle = (adf_dev_ring_handle_t *)trans_hnd;
     icp_accel_dev_t *accel_dev = (icp_accel_dev_t*) pRingHandle->accel_dev;
@@ -183,7 +183,7 @@ inline void icp_adf_updateQueueTail(icp_comms_trans_handle trans_hnd)
  * icp_adf_isRingEmpty
  * Data plain support function -  check if the ring is empty
  */
-inline CpaBoolean icp_adf_isRingEmpty(icp_comms_trans_handle trans_hnd)
+CpaBoolean icp_adf_isRingEmpty(icp_comms_trans_handle trans_hnd)
 {
     Cpa32U mask = 0;
     adf_dev_ring_handle_t *pRingHandle = (adf_dev_ring_handle_t *)trans_hnd;
@@ -205,7 +205,7 @@ inline CpaBoolean icp_adf_isRingEmpty(icp_comms_trans_handle trans_hnd)
  *  * icp_adf_pollQueue
  *   * Data plain support function - Poll messages from the queue.
  *    */
-inline CpaStatus icp_adf_pollQueue(icp_comms_trans_handle trans_hnd,
+CpaStatus icp_adf_pollQueue(icp_comms_trans_handle trans_hnd,
         Cpa32U response_quota)
 {
     adf_dev_ring_handle_t *pRingHandle = (adf_dev_ring_handle_t *)trans_hnd;
@@ -260,7 +260,7 @@ inline CpaStatus icp_adf_pollQueue(icp_comms_trans_handle trans_hnd,
  * send. This should only be called on request rings. If the function returns
  * true then it is ok to call icp_adf_updateQueueTail() function on this ring.
  */
-inline CpaBoolean icp_adf_queueDataToSend(icp_comms_trans_handle trans_hnd)
+CpaBoolean icp_adf_queueDataToSend(icp_comms_trans_handle trans_hnd)
 {
     adf_dev_ring_handle_t *ringData = (adf_dev_ring_handle_t *)trans_hnd;
     icp_accel_dev_t *accel_dev = (icp_accel_dev_t*) ringData->accel_dev;

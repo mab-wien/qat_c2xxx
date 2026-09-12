@@ -147,7 +147,6 @@ CpaStatus adf_aefwLoadFirmware(icp_accel_dev_t *pAccelDev)
         return CPA_STATUS_FAIL;
     }
     ICP_MEMCPY(pUofFwAddr, pFwAddr, fwSize);
-
     /*
      * Add the local copies to the config table.
      * When the memory address is needed again it can be queried from
@@ -356,14 +355,13 @@ CpaStatus adf_aefwGetFirmware(icp_accel_dev_t *pAccelDev,
             status_addr = icp_adf_cfgGetParamValue(pAccelDev, INTERNAL_SEC,
                                   ICP_CFG_UOF_ADDRESS_KEY, config_value);
             *pAddr = (void *)ICP_STRTOUL(config_value, NULL, ADF_CFG_BASE_HEX);
-            status_size = icp_adf_cfgGetParamValue(pAccelDev, INTERNAL_SEC,
+	    status_size = icp_adf_cfgGetParamValue(pAccelDev, INTERNAL_SEC,
                                   ICP_CFG_UOF_SIZE_BYTES_KEY, config_value);
             *pSize = (Cpa32U)ICP_STRTOUL(config_value, NULL, ADF_CFG_BASE_DEC);
             break;
         case ADF_FW_MMP_TYPE:
             status_addr = icp_adf_cfgGetParamValue(pAccelDev, INTERNAL_SEC,
                                   ICP_CFG_MMP_ADDRESS_KEY, config_value);
-            *pAddr = (void *)ICP_STRTOUL(config_value, NULL, ADF_CFG_BASE_HEX);
             status_size = icp_adf_cfgGetParamValue(pAccelDev, INTERNAL_SEC,
                                   ICP_CFG_MMP_SIZE_BYTES_KEY, config_value);
             *pSize = (Cpa32U)ICP_STRTOUL(config_value, NULL, ADF_CFG_BASE_DEC);

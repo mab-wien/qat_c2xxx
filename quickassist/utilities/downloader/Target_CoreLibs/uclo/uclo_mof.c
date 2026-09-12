@@ -582,6 +582,7 @@ UcLo_MapMofAddr (icp_firml_handle_t *handle,
     /* UOF_FID (0xc6c2) for uof object 
      * SUOF_FID for suof object
      */
+
     if ((((uof_fileHdr_T *) mofPtr)->fileId == UOF_FID) ||
         (((suof_fileHdr_T *) mofPtr)->fileId == SUOF_FID))
     {
@@ -599,7 +600,6 @@ UcLo_MapMofAddr (icp_firml_handle_t *handle,
     /* return BADOBJ if neither UOF/SUOF nor MOF */
     else if (((mof_fileHdr_T *)mofPtr)->fileId != MOF_FID)
     {
-        PRINTF("unsupported file format\n");
         return (UCLO_BADOBJ);                 
     }
 

@@ -80,6 +80,7 @@
 #include "adf_dev_csr.h"
 #include "adf_platform.h"
 #include <linux/mutex.h>
+#include <linux/sched/signal.h>
 
 #define ADF_DEV_CSR_NAME            ("icp_dev_csr")
 #define ADF_DEV_CSR_MAX_MINOR       (255)

@@ -76,6 +76,8 @@
 #include "adf_platform.h"
 #include <linux/mutex.h>
 #include <linux/completion.h>
+#include <linux/sched/signal.h>
+
 /* Character Device Driver Name */
 #define DEVICE_NAME                     "icp_adf_gige_wd"
 #define COMPLETION_TIME                 5000

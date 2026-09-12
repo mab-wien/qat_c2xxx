@@ -545,9 +545,10 @@ CpaStatus adf_cfgAddKeyValueParam(icp_accel_dev_t *accel_dev,
     }
     else if(ADF_HEX == type)
     {
-        value_addr = (Cpa64U *)val;
-        snprintf(pKeyValue->val, ADF_CFG_MAX_VAL_LEN_IN_BYTES,
-                 "0x%p", value_addr);
+//        value_addr = (Cpa64U *)val;
+//       snprintf(pKeyValue->val, ADF_CFG_MAX_VAL_LEN_IN_BYTES,
+//                 "0x%p", value_addr);
+       snprintf(pKeyValue->val, ADF_CFG_MAX_VAL_LEN_IN_BYTES,"0x%lx", (uintptr_t)val);
     }
     else
     {
