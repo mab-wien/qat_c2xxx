@@ -102,7 +102,7 @@ else
       
 all:
 	cp -f $(ICP_OSAL_RELEASE_LINUX)/libosal.a $(PWD)
-	$(MAKE) -C $(KDIR) M=$(PWD)
+	$(MAKE) -C $(KDIR) M=$(PWD) lib.a
 	
 clean:
 	$(RM) -r ../../uclo/*.o ../.*.cmd ../*.o .*.cmd libosal.a *.o *.mod.c *.ko .tmp_versions lib.a Module.symvers
