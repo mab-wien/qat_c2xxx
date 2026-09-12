@@ -110,6 +110,7 @@
 #include "lac_rsa_p.h"
 #include "sal_statistics.h"
 #include "lac_rsa_stats_p.h"
+#include "lac_hooks.h"
 
 /* Number of RSA statistics */
 #define LAC_RSA_NUM_STATS (sizeof(CpaCyRsaStats64) / sizeof(Cpa64U))
