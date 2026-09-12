@@ -86,3 +86,8 @@ INCLUDES+= -I$(API_DIR) \
 EXTRA_CFLAGS += $(INCLUDES)
 EXTRA_CFLAGS += $(cmd_line_cflags)
 EXTRA_LDFLAGS +=-whole-archive
+
+# Modern Kbuild (~6.13+) no longer honors the legacy EXTRA_CFLAGS name for
+# per-object compiler flags - it must be ccflags-y. Feed everything
+# accumulated above (by every Makefile that includes this file) into it.
+ccflags-y += $(EXTRA_CFLAGS)
