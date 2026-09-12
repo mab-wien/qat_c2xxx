@@ -141,7 +141,7 @@ int adf_chr_drv_create(adf_chr_drv_info_t *drv_info)
                 return FAIL;
         }
 
-        drv_info->drv_class = class_create(drv_info->owner, drv_info->name);
+        drv_info->drv_class = class_create(drv_info->name);
         if (IS_ERR(drv_info->drv_class)) {
                 ADF_ERROR("class_create failed for device: %s\n",
                               drv_info->name);
