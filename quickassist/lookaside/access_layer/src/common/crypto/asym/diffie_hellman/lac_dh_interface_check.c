@@ -84,6 +84,7 @@
 #include "icp_qat_fw_pke.h"
 #include "icp_qat_fw_mmp.h"
 #include "lac_common.h"
+#include "lac_dh_stats_p.h"
 
 #define COMPILE_TIME_ASSERT(pred) \
         switch(0){case 0: case pred:;}
