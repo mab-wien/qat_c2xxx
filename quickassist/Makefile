@@ -80,8 +80,11 @@ else
 endif
 
 #Paths to Top-Level Makefiles for each team####
+KBUILD_EXTRA_SYMBOLS += $(ICP_ROOT)/quickassist/utilities/libusdm_drv/Module.symvers
+export KBUILD_EXTRA_SYMBOLS
 
 OSAL_PATH=$(ICP_ROOT)/quickassist/utilities/osal/
+CMN_MEM_PATH=$(ICP_ROOT)/quickassist/utilities/libusdm_drv/
 HAL_PATH=$(ICP_ROOT)/quickassist/utilities/downloader/
 HAL_LIB_PATH=$(ICP_ROOT)/quickassist/utilities/downloader/
 QAT_FW_PATH=$(ICP_ROOT)/quickassist/lookaside/firmware/
@@ -121,6 +124,22 @@ install_scripts:
 	@cp $(CONFIG_PATH)/dh89xxcc_qa_dev0_single_accel.conf $(ICP_BUILD_OUTPUT)/;
 	@cp $(CONFIG_PATH)/c2xxx_qa_dev0.conf $(ICP_BUILD_OUTPUT)/;
 
+#
+# Common memory driver
+#
+
+#userspace common memory library
+cmn_user: clean output_dir lac_lib_dir
+	@echo ; echo 'Building common mem driver for user space';
+	@cd $(CMN_MEM_PATH) && $(MAKE) ARCH=$(ICP_ARCH_USER) ICP_ENV_DIR=$(ICP_TOP_ENV) OS=linux ICP_OS?=linux_2.6 ICP_OS_LEVEL=user_space CPM_UPSTREAM=1 cm_user;\
+	echo ; echo 'Copying Common mem library';
+	cp $(CMN_MEM_PATH)/libusdm_drv_s.so $(CMN_MEM_PATH)/libusdm_drv.a $(ICP_BUILD_OUTPUT)/;
+
+#common mem driver ko
+cmn_ko: clean output_dir
+	@echo ; echo 'Building usdm_drv.ko';
+	@cd $(CMN_MEM_PATH) && $(MAKE) ICP_ENV_DIR=$(ICP_TOP_ENV) OS=linux ICP_OS?=linux_2.6 ICP_OS_LEVEL=kernel_space ICP_QDM_IOMMU=1 CPM_UPSTREAM=1 cm_kernel
+	@cp $(CMN_MEM_PATH)/usdm_drv.ko $(ICP_BUILD_OUTPUT)
 
 #libosal needed by hal and adf
 libosal: output_dir lac_lib_dir
@@ -151,7 +170,7 @@ hal_ci: output_dir libosal_ci
 	@echo ; echo 'Copying HAL Binary to $(LAC_LIB_DIR)';
 	@cp $(HAL_LIB_PATH)/lib_linux_le/$(ICP_TOOLS_TARGET)/icp_ae_loader_kernel.a $(LAC_LIB_DIR)/
 
-adf: output_dir lac_lib_dir libosal hal
+adf: output_dir lac_lib_dir libosal hal cmn_ko
 	@echo ; echo 'Building ADF';
 	@cd $(ADF_PATH) && export ADF_PLATFORM=ACCELDEV && export ICP_ENV_DIR=$(ICP_TOP_ENV) export ONE_KO_RELEASE_PACKAGE=1 && ICP_OS_LEVEL=kernel_space && $(MAKE);
 	cp $(ADF_PATH)/build/linux_2.6/libadf.a $(LAC_LIB_DIR)/;
@@ -179,7 +198,7 @@ adfvf: output_dir lac_lib_dir libosalvf
 	@cd $(ADF_PATH) && export ADF_PLATFORM=ACCELDEVVF && export ICP_ENV_DIR=$(ICP_TOP_ENV) export ONE_KO_RELEASE_PACKAGE=1 && ICP_OS_LEVEL=kernel_space && $(MAKE);
 	cp $(ADF_PATH)/build/linux_2.6/libadf.a $(LAC_LIB_DIR)/;
 
-adf_user: output_dir lac_lib_dir libosal_user
+adf_user: output_dir lac_lib_dir libosal_user cmn_user
 	@echo ; echo 'Building user ADF';
 	@cd $(ADF_PATH) && export ADF_PLATFORM=ACCELDEV && export ICP_ENV_DIR=$(ICP_TOP_ENV) && export ONE_KO_RELEASE_PACKAGE=1 && ICP_OS_LEVEL=user_space && $(MAKE) ARCH=$(ICP_ARCH_USER) adf_user;
 	cp $(ADF_PATH)/build/linux_2.6/libadf_proxy.a $(ICP_BUILD_OUTPUT)/;
