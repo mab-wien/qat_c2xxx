@@ -1,5 +1,6 @@
 export ICP_ROOT ?= $(PWD)
 export ICP_ENV_DIR ?= $(ICP_ROOT)/quickassist/build_system/build_files/env_files
+export ICP_BUILDSYSTEM_PATH ?= $(ICP_ROOT)/quickassist/build_system
 JOBS := $(shell nproc 2>/dev/null || echo 1)
 
 
