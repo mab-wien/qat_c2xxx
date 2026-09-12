@@ -117,6 +117,8 @@ inline void adf_put_module(void)
  * adf_init
  * Adf lib init function
  */
+extern int __init adf_init(void);
+
 int __init adf_init(void)
 {
         Cpa32U status = SUCCESS;
@@ -151,6 +153,8 @@ int __init adf_init(void)
  * adfdrv_release
  * Adf lib exit function
  */
+extern void adf_exit(void);
+
 void adf_exit(void)
 {
         if (SUCCESS != adf_dynUnregister()) {
