@@ -93,6 +93,7 @@
 #include "lac_sym_qat.h"
 #include "icp_qat_fw_la.h"
 #include "lac_sal_types_crypto.h"
+#include "icp_sal_iommu.h"
 
 /*
 ********************************************************************************
