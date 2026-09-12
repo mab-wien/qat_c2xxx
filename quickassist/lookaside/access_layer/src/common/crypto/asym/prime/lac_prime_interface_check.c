@@ -99,6 +99,8 @@
         switch(0){case 0: case pred:;}
 
 
+extern void LacPrime_CompileTimeAssertions(void);
+
 void LacPrime_CompileTimeAssertions(void)
 {
 
