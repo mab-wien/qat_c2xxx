@@ -30,6 +30,7 @@
  *  version: QAT1.5.L.1.13.0-19
  */
 #include "Osal.h"
+#include <linux/timekeeping.h>
 #include "OsalOsTypes.h"
 #include "OsalDevDrv.h"
 
@@ -422,16 +423,11 @@ osalTimeGet (OsalTimeval * pTime)
      * -- time_t   (type long, second)
      * -- suseconds_t (type long, usecond)
      */
-    struct timeval _pTime;
+    struct timespec64 _pTime;
 
-    do_gettimeofday (&_pTime);
-    /*
-     * Translate microsecond to nanosecond,
-     * second field is identical so no translation
-     * there.
-     */
+    ktime_get_real_ts64(&_pTime);
     pTime->secs = _pTime.tv_sec;
-    pTime->nsecs = _pTime.tv_usec * OSAL_THOUSAND;
+    pTime->nsecs = _pTime.tv_nsec;
     return OSAL_SUCCESS;
 }
 
@@ -473,7 +469,7 @@ osalTimestampGet (void)
 {
     UINT64 timestamp;
     /* Read the 64-bit LSB of the time stamp counter */
-    rdtscll(timestamp);
+    timestamp = rdtsc();
     return (timestamp);
 }
 

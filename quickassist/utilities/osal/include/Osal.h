@@ -653,6 +653,9 @@ osalMemSet (void *ptr, UINT8 filler, UINT32 count);
  *  Time
  *****************************/
 
+int __init osal_init(void);
+void osal_exit(void);
+
 /* Retrieve current system time */
 OSAL_PUBLIC OSAL_STATUS
 osalTimeGet (OsalTimeval * pTime);
