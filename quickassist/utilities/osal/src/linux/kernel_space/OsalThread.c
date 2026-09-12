@@ -43,8 +43,8 @@
 DECLARE_MUTEX (osalThreadMutex);
 DECLARE_MUTEX (osalThreadStopMutex);
 #else
-DEFINE_SEMAPHORE (osalThreadMutex);
-DEFINE_SEMAPHORE (osalThreadStopMutex);
+DEFINE_SEMAPHORE (osalThreadMutex, 1);
+DEFINE_SEMAPHORE (osalThreadStopMutex, 1);
 #endif
 
 OSAL_PUBLIC OSAL_STATUS
