@@ -525,7 +525,7 @@ chr_drv_create_class(chr_drv_info_t* drv_info)
     OSAL_LOCAL_ENSURE(drv_info,
               "chr_drv_create_class(): Invalid parameter value ",
               OSAL_FAIL);
-    drv_info->drv_class = class_create(THIS_MODULE, drv_info->name);
+    drv_info->drv_class = class_create(drv_info->name);
     if (IS_ERR(drv_info->drv_class)) {
         osalLog (OSAL_LOG_LVL_ERROR, OSAL_LOG_DEV_STDOUT,
         "class_create failed\n", 0, 0, 0, 0, 0, 0, 0, 0);
