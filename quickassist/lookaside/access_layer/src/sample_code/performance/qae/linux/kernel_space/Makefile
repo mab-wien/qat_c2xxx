@@ -122,7 +122,7 @@ EXTRA_CFLAGS += -DKERNEL_SPACE
 endif
 EXTRA_CFLAGS+=-DSAL_IOMMU_CODE
 
-KBUILD_EXTRA_SYMBOLS += $(PERF_SAMPLE_SRC_ROOT)/../../Module.symvers
+KBUILD_EXTRA_SYMBOLS += $(ICP_ROOT)/quickassist/lookaside/access_layer/build/icp_qa_al.symvers
 export $(KBUILD_EXTRA_SYMBOLS)
 
 #include your $(ICP_OS)_$(ICP_OS_LEVEL).mk file
