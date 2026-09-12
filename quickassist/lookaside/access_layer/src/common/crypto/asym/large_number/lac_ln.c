@@ -1137,6 +1137,7 @@ LacLn_Init(CpaInstanceHandle instanceHandle)
 
    /* Call compile time param check function to ensure it is included
       in the build by the compiler */
+    extern void LacLn_CompileTimeAssertions(void);
     LacLn_CompileTimeAssertions();
 
     return status;
