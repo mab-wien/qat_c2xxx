@@ -125,6 +125,10 @@ CpaStatus adf_pollBank(icp_et_ring_bank_data_t *bank,
  * via the ISR method.
  * N.B. The response_quota is per ring.
  */
+extern CpaStatus icp_sal_pollBank(Cpa32U accelId,
+                           Cpa32U bank_number,
+                           Cpa32U response_quota);
+
 CpaStatus icp_sal_pollBank(Cpa32U accelId,
                            Cpa32U bank_number,
                            Cpa32U response_quota)
@@ -173,6 +177,9 @@ CpaStatus icp_sal_pollBank(Cpa32U accelId,
  * via the ISR method.
  * N.B. The response_quota is per ring.
  */
+extern CpaStatus icp_sal_pollAllBanks(Cpa32U accelId,
+                               Cpa32U response_quota);
+
 CpaStatus icp_sal_pollAllBanks(Cpa32U accelId,
                                Cpa32U response_quota)
 {
