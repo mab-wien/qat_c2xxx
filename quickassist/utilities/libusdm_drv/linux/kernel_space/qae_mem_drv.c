@@ -966,7 +966,7 @@ chr_drv_create_class(chr_drv_info_t* drv_info)
                      "chr_drv_create_class(): Invalid parameter value ",
                      -EINVAL);
 
-    drv_info->drv_class = class_create(THIS_MODULE, drv_info->name);
+    drv_info->drv_class = class_create(drv_info->name);
     if (IS_ERR(drv_info->drv_class))
     {
         mm_err("%s:%d class_create failed\n",__func__,__LINE__);
