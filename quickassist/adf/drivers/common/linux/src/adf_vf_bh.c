@@ -77,6 +77,7 @@
 #include "icp_adf_init.h"
 #include "adf_platform.h"
 #include "adf_drv_sriov.h"
+#include "adf_bh.h"
 
 
 /*
