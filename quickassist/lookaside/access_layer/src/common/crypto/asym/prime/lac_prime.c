@@ -1138,6 +1138,7 @@ LacPrime_Init(CpaInstanceHandle instanceHandle)
 
     /* Call compile time param check function to ensure it is included
       in the build by the compiler */
+    extern void LacPrime_CompileTimeAssertions(void);
     LacPrime_CompileTimeAssertions();
     return status;
 }
