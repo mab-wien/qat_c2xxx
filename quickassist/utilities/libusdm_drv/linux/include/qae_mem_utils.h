@@ -93,7 +93,8 @@ MALLOC_DECLARE(M_QAE_MEM);
 
 #define mm_info(...) pr_info(USDM_MOD __VA_ARGS__)
 
-#define mm_warning(...) pr_warning(USDM_MOD __VA_ARGS__)
+#define mm_warning(...) pr_warn(USDM_MOD __VA_ARGS__)
+int handle_other_ioctls(uint32_t cmd);
 
 /*define types which need to vary between 32 and 64 bit*/
 #define QAE_PAGE_SHIFT 12

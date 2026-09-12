@@ -129,7 +129,7 @@ int qdm_iommu_map(dma_addr_t *iova, void *vaddr, size_t size)
 			IOMMU_READ|IOMMU_WRITE|IOMMU_CACHE);
 #else
 	return iommu_map(domain, *iova, paddr, size,
-			IOMMU_READ|IOMMU_WRITE|IOMMU_CACHE);
+			IOMMU_READ|IOMMU_WRITE|IOMMU_CACHE, GFP_KERNEL);
 #endif
 }
 EXPORT_SYMBOL_GPL(qdm_iommu_map);
