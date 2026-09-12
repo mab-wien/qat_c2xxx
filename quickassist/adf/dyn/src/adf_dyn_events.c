@@ -76,6 +76,7 @@
 #include "adf_cfg.h"
 #include "adf_platform.h"
 #include "adf_dyn.h"
+#include "adf_dyn_events.h"
 #include "Osal.h"
 
 /*
