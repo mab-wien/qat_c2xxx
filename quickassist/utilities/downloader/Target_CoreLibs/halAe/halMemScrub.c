@@ -144,7 +144,7 @@ halMem_getCsrName(unsigned int CSR_offset)
 * 
 * 
 *****************************************************************************/
-int halMem_CnvHalAeRetCode(int halRet)
+static int halMem_CnvHalAeRetCode(int halRet)
 {
     switch(halRet)
     {
@@ -932,7 +932,7 @@ halMem_MmpInitializeMemory(const char* FunctionName,
   *    
   * 
   *****************************************************************************/
-int 
+static int 
 halMem_ScrubMMPMemory(icp_firml_handle_t *handle)
 {
     int Status = HALMEM_SUCCESS;
@@ -1872,7 +1872,7 @@ int halMem_SharedRamToDRam(
   * 
   * 
   *****************************************************************************/
-int 
+static int 
 halMem_ScrubSharedRam(icp_firml_handle_t *handle)
 {
     int Status = HALMEM_SUCCESS, halAeStatus = HALAE_SUCCESS;

@@ -210,6 +210,15 @@ int
 halMem_InitMemory(icp_firml_handle_t *handle,
                        QAT_MEM_TYPE QatMemType);
 
+int halMem_SharedRamToDRam(
+      icp_firml_handle_t *Handle, 
+      unsigned int QatNum, 
+      unsigned int ae,
+      unsigned int ShramAddr,
+      unsigned int Size,
+      unsigned int *DRamAddr,
+      unsigned int EndianSwap);
+
 #endif  /* __HALMEMSCRUB_H */ 
 
 
