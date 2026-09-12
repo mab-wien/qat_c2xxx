@@ -109,7 +109,7 @@
  * QatCtrl_AdminSyncCb
  * Admin Sync Callback function.
  */
-void
+static void
 QatCtrl_AdminSyncCb(void *pCallbackTag, CpaStatus status)
 {
     LacSync_GenWakeupSyncCaller(pCallbackTag, status);
