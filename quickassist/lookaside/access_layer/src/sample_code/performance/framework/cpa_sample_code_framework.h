@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  *****************************************************************************/
 
@@ -74,10 +74,6 @@
 
 #include "cpa.h"
 #include "cpa_sample_code_utils_common.h"
-
-#ifdef WITH_CPA_MUX
-#include "cpa_impl_mux.h"
-#endif
 
 /*the limit of the number of different types of threads to be created*/
 #define MAX_THREAD_VARIATION                        (300)
@@ -187,8 +183,14 @@ typedef struct single_thread_test_data_s
 
 
 
-extern volatile CpaBoolean poll_inline_g;
 
+extern volatile CpaBoolean poll_inline_g;
+#ifdef STV_ADD_TEST_IDS
+/* Will be NULL strings by default */
+#define STV_TEST_ID_SIZE    32
+extern char stv_test_id[STV_TEST_ID_SIZE];
+extern char stv_test_id_name[STV_TEST_ID_SIZE];
+#endif /* STV_ADD_TEST_IDS */
 /* *****************************************************************************
  * FUNCTION PROTOTYPES
  * ****************************************************************************/
@@ -369,9 +371,6 @@ void killCreatedThreads(int numThreadsToKill);
  *
  *****************************************************************************/
 void clearPerfStats(perf_data_t *stats);
-
-CpaStatus muxRegister(void);
-CpaStatus muxDeRegister(void);
 
 
 /**

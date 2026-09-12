@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  ***************************************************************************/
 
@@ -216,73 +216,6 @@ void dcPerformStatefulCallback(
         pPerfData->endCyclesTimestamp = sampleCodeTimestamp();
     }
     sampleCodeSemaphorePost(&pPerfData->comp);
-}
-
-
-static CpaStatus dcSampleCreateStatefulContextBuffer(Cpa32U buffSize,
-        Cpa32U metaSize,CpaBufferList **pBuffListArray, Cpa32U nodeId)
-{
-    CpaStatus status = CPA_STATUS_SUCCESS;
-
-
-    *pBuffListArray = qaeMemAllocNUMA((sizeof(CpaBufferList)),
-            nodeId, BYTE_ALIGNMENT_64);
-    if(NULL== (*pBuffListArray))
-    {
-        PRINT_ERR(" Unable to allocate Buffers List Array\n");
-        return CPA_STATUS_FAIL;
-    }
-    (*pBuffListArray)->numBuffers = ONE_BUFFER_DC;
-    (*pBuffListArray)->pBuffers =
-        qaeMemAllocNUMA((sizeof(CpaFlatBuffer)),
-                nodeId, BYTE_ALIGNMENT_64);
-    if(NULL == (*pBuffListArray)->pBuffers)
-    {
-        PRINT_ERR(" Unable to allocate Flat Buffers\n");
-        qaeMemFreeNUMA((void**)pBuffListArray);
-        return CPA_STATUS_FAIL;
-    }
-    if(metaSize)
-    {
-        (*pBuffListArray)->pPrivateMetaData =
-            (Cpa8U *)qaeMemAllocNUMA(metaSize, nodeId, BYTE_ALIGNMENT_64);
-        if(NULL == (*pBuffListArray)->pPrivateMetaData)
-        {
-            PRINT_ERR(" Unable to allocate pPrivateMetaData Buffers\n");
-            qaeMemFreeNUMA((void**)&(*pBuffListArray)->pBuffers);
-            qaeMemFreeNUMA((void**)pBuffListArray);
-            return CPA_STATUS_FAIL;
-        }
-    }
-    else
-    {
-        (*pBuffListArray)->pPrivateMetaData = NULL;
-    }
-
-
-    /* Allocate Flat buffer for each buffer List */
-    (*pBuffListArray)->pBuffers->dataLenInBytes = buffSize;
-    if (0 == buffSize)
-    {
-        (*pBuffListArray)->pBuffers->pData = NULL;
-    }
-    else
-    {
-        (*pBuffListArray)->pBuffers->pData =
-            qaeMemAllocNUMA(buffSize, nodeId, BYTE_ALIGNMENT_64);
-        if(NULL == (*pBuffListArray)->pBuffers->pData )
-        {
-            PRINT(" Unable to allocate Flat buffer\n");
-            qaeMemFreeNUMA((void**)&(*pBuffListArray)->pPrivateMetaData);
-            qaeMemFreeNUMA((void**)&(*pBuffListArray)->pBuffers);
-            qaeMemFreeNUMA((void**)pBuffListArray);
-            return CPA_STATUS_FAIL;
-        }
-        memset((*pBuffListArray)->pBuffers->pData, 0 ,buffSize);
-    }
-
-
-    return status;
 }
 
 static void dcSampleFreeStatefulContextBuffer(CpaBufferList *pBuffListArray)

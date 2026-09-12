@@ -1,5 +1,5 @@
 ###############################################################################
-# Makefile variables used by all Look-Aside Crypto builds
+# Makefile variables used by all Look-Aside Acceleration builds
 #
 # @par
 # This file is provided under a dual BSD/GPLv2 license.  When using or 
@@ -7,7 +7,7 @@
 # 
 #   GPL LICENSE SUMMARY
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 # 
 #   This program is free software; you can redistribute it and/or modify 
 #   it under the terms of version 2 of the GNU General Public License as
@@ -29,7 +29,7 @@
 # 
 #   BSD LICENSE 
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 #   All rights reserved.
 # 
 #   Redistribution and use in source and binary forms, with or without 
@@ -59,7 +59,7 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # 
 # 
-#  version: QAT1.5.L.1.11.0-36
+#  version: QAT1.5.L.1.13.0-19
 ###############################################################################
 
 # include directories for external APIs
@@ -100,10 +100,6 @@ ifndef max_mr
 EXTRA_CFLAGS += -D MAX_MR_ROUND=50
 else
 EXTRA_CFLAGS += -D MAX_MR_ROUND=$(max_mr)
-endif
-
-ifneq ($(WITH_CPA_MUX),)
-EXTRA_CFLAGS += -DWITH_CPA_MUX
 endif
 
 ifeq ($(ICP_OS_LEVEL), user_space)

@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  *****************************************************************************/
 
@@ -325,6 +325,47 @@ STATIC long adf_csr_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
         return ret;
 }
 
+static void adf_mmap_close(struct vm_area_struct *vma)
+{
+        CpaStatus status = CPA_STATUS_SUCCESS;
+        adf_user_process_t* user_proc = NULL;
+        wait_queue_head_t* wait_queue = NULL;
+        icp_accel_dev_t *AccelDev = NULL;
+        if (vma->vm_file){
+                mutex_lock(&csr_lock);
+                user_proc = (adf_user_process_t*) vma->vm_file->private_data;
+                /* judge whether this is the process that open it */
+                if (user_proc && user_proc->processId == current->tgid) {
+                        AccelDev = user_proc->accelHandle;
+                        wait_queue = user_proc->processWaitQueue;
+                        user_proc->processWaitQueue = NULL;
+                        if (wait_queue){
+                                ICP_FREE(wait_queue);
+                        }
+                        if(NULL == AccelDev->pUserSpaceHandle){
+                                ADF_ERROR("UserSpace process list empty for "
+                                    "acceleration device \n");
+                        }
+                        if(NULL == AccelDev->pCommsHandle){
+                                ADF_ERROR("Acceleration device ring private "
+                                    "data cleared\n");
+                        }
+                        status = adf_userProcessDisconnect(&vma->vm_file->private_data);
+                        if (CPA_STATUS_SUCCESS != status) {
+                                ADF_ERROR("adf_userProcessDisconnet failed\n");
+                        }
+                }
+                else if (!user_proc) {
+                        ADF_ERROR("ProcessList already cleared for the "
+                                            "acceleration device \n");
+                }
+                mutex_unlock(&csr_lock);
+        }
+}
+static struct vm_operations_struct adf_mmap_operation = {
+    .close = adf_mmap_close,
+}; 
+
 /*
  * adf_csr_mmap
  * Map the memory to user space
@@ -371,6 +412,7 @@ STATIC int adf_csr_mmap(struct file *fp,
  */
         vma->vm_flags |= VM_IO | (VM_DONTEXPAND | VM_DONTDUMP);
 #endif
+	vma->vm_ops = &adf_mmap_operation;
         vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
         ret = remap_pfn_range(vma,
@@ -419,7 +461,7 @@ STATIC int adf_csr_open(struct inode *inp,
                 user_proc->processWaitQueue = (void*) wait_queue;
         }
         else {
-                adf_userProcessDisconnect(fp->private_data);
+		        adf_userProcessDisconnect(fp->private_data);
                 ADF_ERROR("Failed to allocate memory "
                               "for process wait queue\n");
                 adf_put_module();
@@ -437,30 +479,8 @@ STATIC int adf_csr_open(struct inode *inp,
 STATIC int adf_csr_release(struct inode *inp,
                            struct file *fp)
 {
-        CpaStatus status = CPA_STATUS_SUCCESS;
-        adf_user_process_t* user_proc = NULL;
-        wait_queue_head_t* wait_queue = NULL;
-        int ret = 0;
-
-        if (NULL == fp || NULL == fp->private_data) {
-                ADF_ERROR("invalid file descriptor\n");
-                return -EBADF;
-        }
-        user_proc = (adf_user_process_t*) fp->private_data;
-        mutex_lock(&csr_lock);
-        if (user_proc) {
-                wait_queue = user_proc->processWaitQueue;
-                user_proc->processWaitQueue = NULL;
-                status = adf_userProcessDisconnect(&fp->private_data);
-                if (CPA_STATUS_SUCCESS != status) {
-                        ADF_ERROR("adf_userProcessDisconnet failed\n");
-                        ret = -EIO;
-                }
-                ICP_FREE(wait_queue);
-        }
-        mutex_unlock(&csr_lock);
         adf_put_module();
-        return ret;
+        return 0;
 }
 
 /*

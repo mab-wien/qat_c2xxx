@@ -4,7 +4,7 @@
 # 
 #   GPL LICENSE SUMMARY
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 # 
 #   This program is free software; you can redistribute it and/or modify 
 #   it under the terms of version 2 of the GNU General Public License as
@@ -26,7 +26,7 @@
 # 
 #   BSD LICENSE 
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 #   All rights reserved.
 # 
 #   Redistribution and use in source and binary forms, with or without 
@@ -56,7 +56,7 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # 
 # 
-#  version: QAT1.5.L.1.11.0-36
+#  version: QAT1.5.L.1.13.0-19
 
 ifeq ($($(PROG_ACY)_OS_LEVEL), user_space)
 
@@ -71,8 +71,8 @@ $(OBJECTS): %.o: %.c
 $(LIB_SHARED): obj
 	@echo 'Creating shared library ${LIB_SHARED}'; \
 	cd $($(PROG_ACY)_FINAL_OUTPUT_DIR);\
-	echo $(LINKER) $(LIB_SHARED_FLAGS) -o $@ -lc $(OBJECTS) $(ADDITIONAL_OBJECTS);\
-	$(LINKER) $(LIB_SHARED_FLAGS) -o $@ -lc $(OBJECTS) $(ADDITIONAL_OBJECTS);
+	echo $(LINKER) $(LIB_SHARED_FLAGS) -o $@  $(OBJECTS) $(ADDITIONAL_OBJECTS) -lc;\
+	$(LINKER) $(LIB_SHARED_FLAGS) -o $@  $(OBJECTS) $(ADDITIONAL_OBJECTS) -lc ;
 
 
 # Create the static library
@@ -94,3 +94,5 @@ $(MODULENAME):
 	@echo Error: $@: You cannot build modules in user_space;
 
 endif
+
+-include $($(PROG_ACY)_BUILDSYSTEM_PATH)/build_files/defenses.mk

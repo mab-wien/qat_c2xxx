@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  ***************************************************************************/
 
@@ -1097,10 +1097,13 @@ LacAlgChain_Perform(const CpaInstanceHandle instanceHandle,
                                     * are equal */
                     authOffsetInBytes = pOpData->cryptoStartSrcOffsetInBytes;
 
-                    if (pOpData->messageLenToCipherInBytes > 0)
-                    {
+                    /* For authenticated encryption, authentication length is
+                     * determined by messageLenToCipherInBytes for AES-GCM and
+                     * AES-CCM, and by messageLenToHashInBytes for AES-GMAC.
+                     * You don't see the latter here, as that is the initial
+                     * value of authLenInBytes. */
+                    if (pSessionDesc->hashAlgorithm != CPA_CY_SYM_HASH_AES_GMAC)
                         authLenInBytes = pOpData->messageLenToCipherInBytes;
-                    }
 
                 }
                 else if(CPA_CY_SYM_HASH_SNOW3G_UIA2 ==

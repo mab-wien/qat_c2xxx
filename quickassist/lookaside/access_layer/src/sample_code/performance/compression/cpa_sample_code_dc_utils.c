@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  ***************************************************************************/
 
@@ -80,6 +80,9 @@
 #include "cpa_sample_code_crypto_utils.h"
 #include "cpa_sample_code_framework.h"
 #include "cpa_sample_code_dc_utils.h"
+#ifdef SC_BNP_ENABLED
+#include "cpa_sample_code_dc_bnp.h"
+#endif
 
 #include "icp_sal_poll.h"
 #ifdef LATENCY_CODE
@@ -93,6 +96,7 @@ Cpa32U expansionFactor_g = 1;
 CpaBoolean zeroByteLastRequest_g = CPA_FALSE;
 #endif
 extern int signOfLife;
+
 /* Global array of polling threads */
 sample_code_thread_t* dcPollingThread_g = NULL;
 
@@ -123,6 +127,18 @@ static corpus_file_t *pCorpusFile_g =NULL;
 /* Flag to indicate if the corpus is read into corpus data structure */
 static CpaBoolean corpusRead_g = CPA_FALSE;
 
+#ifdef SC_BNP_ENABLED
+/* corpus Data structure - For BNP tests */
+corpus_data_t bnp_corpus_g = {0};
+
+/* Flag to indicate if the corpus is read into corpus data structure 
+ * For BNP Tests only*/
+static CpaBoolean bnpCorpusRead_g = CPA_FALSE;
+
+/* corpus File structure*/
+static corpus_file_t *pBnpCorpusFile_g =NULL;
+#endif
+
 /* Dynamic Buffer List buffer list used to start DC Services */
 CpaBufferList ***pInterBuffList_g = NULL;
 
@@ -152,14 +168,14 @@ Cpa32U getThroughput(Cpa64U numPackets, Cpa32U packetSize,perf_cycles_t cycles)
      * bytes to bytes/milli second or kiloBytes/second*/
     rate = bytesSent;
     /*rate in kBps*/
-   do_div(rate,time);
-   /*check that the rate is high enough to convert to Megabits per second*/
-   if(rate ==0)
-   {
-       PRINT_ERR("no data was sent to calculate throughput\n");
-       return 0;
-   }
-   /* convert Kilobytes/second to Kilobits/second*/
+    do_div(rate,time);
+    /*check that the rate is high enough to convert to Megabits per second*/
+    if(rate ==0)
+    {
+        PRINT_ERR("no data was sent to calculate throughput\n");
+        return 0;
+    }
+    /* convert Kilobytes/second to Kilobits/second*/
     rate = rate*NUM_BITS_IN_BYTE;
     /*then convert rate from Kilobits/second to Megabits/second*/
     do_div(rate,KILOBITS_IN_MEGABITS);
@@ -168,7 +184,7 @@ Cpa32U getThroughput(Cpa64U numPackets, Cpa32U packetSize,perf_cycles_t cycles)
 #endif
 
 static void freeDcBufferList(CpaBufferList **buffListArray,
-               Cpa32U numberOfBufferList)
+        Cpa32U numberOfBufferList)
 {
     int i = 0, j = 0;
     Cpa32U numberOfBuffers=0;
@@ -176,82 +192,94 @@ static void freeDcBufferList(CpaBufferList **buffListArray,
     i = numberOfBufferList;
     for (i = 0; i < numberOfBufferList; i++)
     {
-      numberOfBuffers = buffListArray[i]->numBuffers;
-      for(j=0; j< numberOfBuffers; j++)
-      {
-          if(buffListArray[i]->pBuffers[j].pData != NULL)
-          {
-              qaeMemFreeNUMA((void**)&buffListArray[i]->pBuffers[j].pData);
-              buffListArray[i]->pBuffers[j].pData = NULL;
-          }
-      }
-      if(buffListArray[i]->pBuffers !=NULL)
-      {
+        numberOfBuffers = buffListArray[i]->numBuffers;
+        for(j=0; j< numberOfBuffers; j++)
+        {
+            if(buffListArray[i]->pBuffers[j].pData != NULL)
+            {
+                qaeMemFreeNUMA((void**)&buffListArray[i]->pBuffers[j].pData);
+                buffListArray[i]->pBuffers[j].pData = NULL;
+            }
+        }
+        if(buffListArray[i]->pBuffers !=NULL)
+        {
 
-          qaeMemFreeNUMA((void**)&buffListArray[i]->pBuffers);
-          buffListArray[i]->pBuffers = NULL;
-      }
+            qaeMemFreeNUMA((void**)&buffListArray[i]->pBuffers);
+            buffListArray[i]->pBuffers = NULL;
+        }
 
-      if(buffListArray[i]->pPrivateMetaData !=NULL)
-      {
+        if(buffListArray[i]->pPrivateMetaData !=NULL)
+        {
 
-          qaeMemFreeNUMA((void**)&buffListArray[i]->pPrivateMetaData);
-      }
+            qaeMemFreeNUMA((void**)&buffListArray[i]->pPrivateMetaData);
+        }
     }
 }
 
 
 
-CpaStatus populateCorpus(Cpa32U buffSize, corpus_type_t corpusType)
+static CpaStatus populateCorpusInternal(corpus_data_t *corpus_data, 
+                                        corpus_file_t **file_data,
+                                        CpaBoolean    *read_flag,
+                                        corpus_type_t corpusType)
 {
     CpaStatus status = CPA_STATUS_SUCCESS;
     Cpa32U numFiles = 0, i = 0;
     char **pCorpusFileNamesArray = NULL;
+    corpus_file_t *pCorpusFile =NULL;
 
     char *canterburyFileNames [] =
     {
-            /* Single Canterbury corpus file is a cocatenation of the following
-             * files:
-             "alice29.txt", "asyoulik.txt", "cp.html",
-            "fields.c","grammar.lsp", "kennedy.xls", "lcet10.txt" ,
-            "plrabn12.txt", "ptt5"
-            */
-            "canterbury"
-     };
+        /* Single Canterbury corpus file is a cocatenation of the following
+         * files:
+         "alice29.txt", "asyoulik.txt", "cp.html",
+         "fields.c","grammar.lsp", "kennedy.xls", "lcet10.txt" ,
+         "plrabn12.txt", "ptt5"
+         */
+        "canterbury"
+    };
+
     char *calgaryFileNames [] =
     {
-            /* Single Calgary corpus file is a cocatenation of the following
-             * files:
-             *  "bib", "book1", "book2", "geo" , "news", "obj1",
-            "obj2", "paper1", "paper2", "paper3", "paper4",
-            "paper5", "paper6", "pic", "progc",
-            "progl" , "progp" ,"trans"
-            */
-            "calgary"
+        /* Single Calgary corpus file is a cocatenation of the following
+         * files:
+         *  "bib", "book1", "book2", "geo" , "news", "obj1",
+         "obj2", "paper1", "paper2", "paper3", "paper4",
+         "paper5", "paper6", "pic", "progc",
+         "progl" , "progp" ,"trans"
+         */
+        "calgary"
     };
 
     char *signOfLifeFile [] =
     {
-            /* 1st 32k of calgary corpus file */
-            "calgary32"
+        /* 1st 32k of calgary corpus file */
+        "calgary32"
     };
 
-    if(corpusRead_g == CPA_FALSE)
+
+    if(corpus_data == NULL || file_data == NULL || read_flag == NULL)
+    {
+        PRINT("%s: Invalid parameters passed \n",__FUNCTION__);
+        return CPA_STATUS_FAIL;
+    }
+
+    if(*read_flag == CPA_FALSE)
     {
         switch(corpusType)
         {
-        case CANTERBURY_CORPUS:
-            pCorpusFileNamesArray = canterburyFileNames;
-            numFiles = sizeof(canterburyFileNames)/sizeof(char *);
-            break;
-        case CALGARY_CORPUS:
-            pCorpusFileNamesArray = calgaryFileNames;
-            numFiles = sizeof(calgaryFileNames)/sizeof(char *);
-            break;
-        case SIGN_OF_LIFE_CORPUS:
-            pCorpusFileNamesArray = signOfLifeFile;
-            numFiles = sizeof(signOfLifeFile)/sizeof(char *);
-            break;
+            case CANTERBURY_CORPUS:
+                pCorpusFileNamesArray = canterburyFileNames;
+                numFiles = sizeof(canterburyFileNames)/sizeof(char *);
+                break;
+            case CALGARY_CORPUS:
+                pCorpusFileNamesArray = calgaryFileNames;
+                numFiles = sizeof(calgaryFileNames)/sizeof(char *);
+                break;
+            case SIGN_OF_LIFE_CORPUS:
+                pCorpusFileNamesArray = signOfLifeFile;
+                numFiles = sizeof(signOfLifeFile)/sizeof(char *);
+                break;
 #ifdef LATENCY_CODE
         /* All zeros corpus. Enables calibrating latencies among
          * different buffer sizes */
@@ -265,13 +293,14 @@ CpaStatus populateCorpus(Cpa32U buffSize, corpus_type_t corpusType)
             return CPA_STATUS_FAIL;
         }
         /* allocate the memory for the corpus file structure */
-        pCorpusFile_g = qaeMemAlloc(numFiles*sizeof(corpus_file_t));
-        if(NULL == pCorpusFile_g)
+        pCorpusFile = qaeMemAlloc(numFiles*sizeof(corpus_file_t));
+        if(NULL == pCorpusFile)
         {
             PRINT_ERR(" Unable to allocate Memory for "
                     "corpus structure\n");
             return CPA_STATUS_FAIL;
         }
+        *file_data = pCorpusFile;
         for(i=0; i<numFiles; i++)
         {
             switch(corpusType)
@@ -281,42 +310,59 @@ CpaStatus populateCorpus(Cpa32U buffSize, corpus_type_t corpusType)
 					/* All zeros corpus. Enables calibrating latencies among
 					 * different buffer sizes */
 					case ZEROS_CORPUS:
-						pCorpusFile_g[i].corpusBinaryDataLen = ZEROS_CORPUS_LENGTH;
-						pCorpusFile_g[i].corpusBinaryData = qaeMemAlloc( pCorpusFile_g[i].corpusBinaryDataLen );
-					    if (pCorpusFile_g[i].corpusBinaryData == NULL)
+						pCorpusFile[i].corpusBinaryDataLen = ZEROS_CORPUS_LENGTH;
+						pCorpusFile[i].corpusBinaryData = qaeMemAlloc( pCorpusFile[i].corpusBinaryDataLen );
+					    if (pCorpusFile[i].corpusBinaryData == NULL)
 					    {
 					        PRINT("%s:: Can't Allocate Memory for ZEROS_CORPUS srcBuff!\n", __FUNCTION__);
 					        status = CPA_STATUS_FAIL;
 					    }
 					    else {
 					    	/* May not be safe to assume qaeMemAlloc() zeros the memory */
-					    	memset( pCorpusFile_g[i].corpusBinaryData, 0, pCorpusFile_g[i].corpusBinaryDataLen );
+					    	memset( pCorpusFile[i].corpusBinaryData, 0, pCorpusFile[i].corpusBinaryDataLen );
 					    	status = CPA_STATUS_SUCCESS;
 					    }
 						break;
 #endif
                     default:
                         status = getCorpusFile(
-                                    &pCorpusFile_g[i].corpusBinaryData,
+                                    &pCorpusFile[i].corpusBinaryData,
                                     pCorpusFileNamesArray[i],
-                                    &pCorpusFile_g[i].corpusBinaryDataLen);
+                                    &pCorpusFile[i].corpusBinaryDataLen);
             }
             if(CPA_STATUS_SUCCESS != status )
             {
                 PRINT_ERR("Get \"%s\" Corpus File Failed\n",
-                                                    pCorpusFileNamesArray[i]);
-                qaeMemFree((void**)&pCorpusFile_g);
+                        pCorpusFileNamesArray[i]);
+                qaeMemFree((void**)&pCorpusFile);
                 return CPA_STATUS_FAIL;
             }
         }
-        corpus_g.fileArray = pCorpusFile_g;
-        corpus_g.numFilesInCorpus = numFiles;
-        corpusRead_g = CPA_TRUE;
+        corpus_data->fileArray = pCorpusFile;
+        corpus_data->numFilesInCorpus = numFiles;
+        *read_flag = CPA_TRUE;
     }
 
     return status;
 }
 
+CpaStatus populateCorpus(Cpa32U buffSize, corpus_type_t corpusType)
+{
+    return populateCorpusInternal(&corpus_g,
+                                  &pCorpusFile_g,
+                                  &corpusRead_g,
+                                  corpusType);
+}
+
+#ifdef SC_BNP_ENABLED
+CpaStatus populateBnpCorpus(Cpa32U buffSize, corpus_type_t corpusType)
+{
+    return populateCorpusInternal(&bnp_corpus_g,
+                                  &pBnpCorpusFile_g,
+                                  &bnpCorpusRead_g,
+                                  corpusType);
+}
+#endif
 
 CpaStatus startDcServices( Cpa32U buffSize, Cpa32U numBuffs)
 
@@ -399,7 +445,7 @@ CpaStatus startDcServices( Cpa32U buffSize, Cpa32U numBuffs)
             }
 
             /* allocate the buffer list memory for the dynamic Buffers */
-             pInterBuffList_g[i] =
+            pInterBuffList_g[i] =
                 qaeMemAllocNUMA(sizeof(CpaBufferList *) * numBuffers,
                         nodeId, BYTE_ALIGNMENT_64);
             if( NULL == pInterBuffList_g[i])
@@ -425,8 +471,8 @@ CpaStatus startDcServices( Cpa32U buffSize, Cpa32U numBuffs)
             for(k = 0;k < numBuffers;k++)
             {
                 tempBufferList[k] = (CpaBufferList *)
-                qaeMemAllocNUMA(sizeof(CpaBufferList),
-                        nodeId, BYTE_ALIGNMENT_64);
+                    qaeMemAllocNUMA(sizeof(CpaBufferList),
+                            nodeId, BYTE_ALIGNMENT_64);
                 if(NULL == tempBufferList[k])
                 {
                     PRINT(" %s:: Unable to allocate memory for "
@@ -437,7 +483,7 @@ CpaStatus startDcServices( Cpa32U buffSize, Cpa32U numBuffs)
                     return CPA_STATUS_FAIL;
                 }
                 tempBufferList[k]->pPrivateMetaData =
-                qaeMemAllocNUMA(size, nodeId, BYTE_ALIGNMENT_64);
+                    qaeMemAllocNUMA(size, nodeId, BYTE_ALIGNMENT_64);
                 if(NULL == tempBufferList[k]->pPrivateMetaData)
                 {
                     PRINT(" %s:: Unable to allocate memory for "
@@ -450,8 +496,8 @@ CpaStatus startDcServices( Cpa32U buffSize, Cpa32U numBuffs)
                 tempBufferList[k]->numBuffers = ONE_BUFFER_DC;
                 /* allocate flat buffers */
                 tempBufferList[k]->pBuffers =
-                qaeMemAllocNUMA((sizeof(CpaFlatBuffer)),
-                        nodeId, BYTE_ALIGNMENT_64);
+                    qaeMemAllocNUMA((sizeof(CpaFlatBuffer)),
+                            nodeId, BYTE_ALIGNMENT_64);
                 if(NULL == tempBufferList[k]->pBuffers )
                 {
                     PRINT_ERR("Unable to allocate memory for pBuffers\n");
@@ -462,7 +508,7 @@ CpaStatus startDcServices( Cpa32U buffSize, Cpa32U numBuffs)
                 }
 
                 tempBufferList[k]->pBuffers[0].pData =
-                qaeMemAllocNUMA(expansionFactor_g*EXTRA_BUFFER*buffSize,nodeId, BYTE_ALIGNMENT_64);
+                    qaeMemAllocNUMA(expansionFactor_g*EXTRA_BUFFER*buffSize,nodeId, BYTE_ALIGNMENT_64);
                 if( NULL == pInterBuffList_g[i])
                 {
                     PRINT_ERR("Unable to allocate Memory for pBuffers\n");
@@ -475,9 +521,9 @@ CpaStatus startDcServices( Cpa32U buffSize, Cpa32U numBuffs)
                     expansionFactor_g*EXTRA_BUFFER *buffSize;
             }
 
-           /* When starting the DC Instance, the API expects that the
-           * private meta data should be greater than the dataLength
-           */
+            /* When starting the DC Instance, the API expects that the
+             * private meta data should be greater than the dataLength
+             */
             /* Configure memory Configuration Function */
             status = cpaDcSetAddressTranslation(dcInstances_g[i],
                     (CpaVirtualToPhysical)qaeVirtToPhysNUMA);
@@ -517,29 +563,48 @@ CpaStatus startDcServices( Cpa32U buffSize, Cpa32U numBuffs)
     return status;
 }
 
-void freeCorpus(void)
+static void freeCorpusInternal(corpus_data_t *corpus_data,
+                        corpus_file_t **corpus_file,
+                        CpaBoolean    *read_flag)
 {
     Cpa32U i = 0;
+    corpus_file_t *pCorpusFile = NULL;
 
-    if (corpusRead_g == CPA_TRUE)
+    if(corpus_data == NULL || corpus_file == NULL || read_flag == NULL)
     {
-        if(corpus_g.fileArray !=NULL)
+        PRINT("%s: Invalid parameters passed \n",__FUNCTION__);
+        return;
+    }
+    
+    pCorpusFile = *corpus_file;
+    if (*read_flag == CPA_TRUE)
+    {
+        if(corpus_data->fileArray !=NULL)
         {
-            for(i=0; i<corpus_g.numFilesInCorpus; i++)
+            for(i=0; i<corpus_data->numFilesInCorpus; i++)
             {
-                if(NULL != pCorpusFile_g[i].corpusBinaryData)
+                if(NULL != pCorpusFile[i].corpusBinaryData)
                 {
-                    qaeMemFree((void**)&pCorpusFile_g[i].corpusBinaryData);
-                    pCorpusFile_g[i].corpusBinaryData = NULL;
+                    qaeMemFree((void**)&pCorpusFile[i].corpusBinaryData);
+                    pCorpusFile[i].corpusBinaryData = NULL;
                 }
             }
             /* Free corpus File Structure */
-            qaeMemFree((void**)&pCorpusFile_g);
-            corpus_g.fileArray = NULL;
+            qaeMemFree((void**)&pCorpusFile);
+            corpus_data->fileArray = NULL;
         }
-        corpusRead_g = CPA_FALSE;
+        *read_flag = CPA_FALSE;
+        *corpus_file = NULL;
     }
     return;
+}
+
+void freeCorpus(void)
+{
+    freeCorpusInternal(&corpus_g,&pCorpusFile_g,&corpusRead_g);
+#ifdef SC_BNP_ENABLED
+    freeCorpusInternal(&bnp_corpus_g,&pBnpCorpusFile_g,&bnpCorpusRead_g);
+#endif
 }
 
 /*stop all acceleration services*/
@@ -570,10 +635,10 @@ CpaStatus stopDcServices(compression_test_params_t *dcSetup)
                 qaeMemFreeNUMA((void**)&tempBufferList[j]->pBuffers);
                 qaeMemFreeNUMA((void**)&tempBufferList[j]);
             }
-           /* free the buffer List*/
-           qaeMemFreeNUMA((void**)&pInterBuffList_g[i]);
-                /*stop all instances*/
-           cpaDcStopInstance(dcInstances_g[i]);
+            /* free the buffer List*/
+            qaeMemFreeNUMA((void**)&pInterBuffList_g[i]);
+            /*stop all instances*/
+            cpaDcStopInstance(dcInstances_g[i]);
         }
         qaeMemFree((void**)&pInterBuffList_g);
         /*set the service started flag to false*/
@@ -603,30 +668,46 @@ CpaStatus stopDcServices(compression_test_params_t *dcSetup)
 CpaStatus calculateRequireBuffers(compression_test_params_t * dcSetup)
 {
     Cpa32U numberOfBuffers = 0, i = 0;
+    corpus_data_t *pCorpusData = NULL;
+    corpus_file_t *pCorpusFile = NULL;
+
+
+#ifdef SC_BNP_ENABLED
+    if(dcSetup->isBnpSession == CPA_TRUE)
+    {
+        pCorpusData = &bnp_corpus_g;
+        pCorpusFile = pBnpCorpusFile_g;
+    }
+    else
+#endif
+    {
+        pCorpusData = &corpus_g;
+        pCorpusFile = pCorpusFile_g;
+    }
 
     dcSetup->numberOfBuffers =
-        qaeMemAlloc(corpus_g.numFilesInCorpus*sizeof(Cpa32U));
+        qaeMemAlloc(pCorpusData->numFilesInCorpus*sizeof(Cpa32U));
     if(NULL == dcSetup->numberOfBuffers)
     {
         PRINT("Could not allocate memory for dcSetup numberOfBuffers array");
         return CPA_STATUS_FAIL;
     }
-    for(i = 0; i < corpus_g.numFilesInCorpus; i++)
+    for(i = 0; i < pCorpusData->numFilesInCorpus; i++)
     {
         /*get number of full sized buffers, ignoring the last bit less than
          * the full buffer size*/
-        if(pCorpusFile_g[i].corpusBinaryDataLen < dcSetup->bufferSize)
+        if(pCorpusFile[i].corpusBinaryDataLen < dcSetup->bufferSize)
         {
             PRINT("Warning the input file size(%d) is less than the specified "
                     "buffer size(%d), results may be skewed\n",
-                    pCorpusFile_g[i].corpusBinaryDataLen,
+                    pCorpusFile[i].corpusBinaryDataLen,
                     dcSetup->bufferSize);
             numberOfBuffers = 1;
         }
         else
         {
             numberOfBuffers =
-                pCorpusFile_g[i].corpusBinaryDataLen/dcSetup->bufferSize;
+                pCorpusFile[i].corpusBinaryDataLen/dcSetup->bufferSize;
         }
         dcSetup->numberOfBuffers[i] = numberOfBuffers;
     }
@@ -760,7 +841,7 @@ CpaStatus dcCreatePollingThreadsIfPollingIsEnabled(void)
 }
 
 CpaStatus dcDpPollNumOperations(perf_data_t *pPerfData,
-                CpaInstanceHandle instanceHandle, Cpa64U numOperations)
+        CpaInstanceHandle instanceHandle, Cpa64U numOperations)
 {
     CpaStatus status = CPA_STATUS_FAIL;
 
@@ -807,7 +888,7 @@ CpaStatus waitForSemaphore(perf_data_t *perfData)
      * semaphore, or if in sync mode, the semaphore should already be free*/
 
     while(sampleCodeSemaphoreWait(&perfData->comp,
-            SAMPLE_CODE_WAIT_THIRTY_SEC)
+                SAMPLE_CODE_WAIT_THIRTY_SEC)
             != CPA_STATUS_SUCCESS)
     {
         if(INITIAL_RESPONSE_COUNT != responsesReceived &&
@@ -880,6 +961,85 @@ void sampleCodeDcPoll(CpaInstanceHandle instanceHandle_in)
 
 #ifndef NEWDISPLAY
 
+#ifdef SC_BNP_ENABLED
+CpaStatus dcPrintBnpStats(thread_creation_data_t* data)
+{
+    perf_cycles_t numOfCycles = {0};
+    perf_data_t stats = {0};
+    CpaStatus status = CPA_STATUS_SUCCESS;
+    Cpa32U i = 0;
+    Cpa32U throughput = 0;
+    Cpa32U bytesConsumed = 0, bytesProduced = 0;
+    Cpa32U averageNumLoops = 0;
+    stv_Bnp_t *dcSetup = (stv_Bnp_t*)data->setupPtr;
+
+
+    /* stop DC Services */
+    status = stopDcServices(&dcSetup->compressTestParams);
+    if(CPA_STATUS_SUCCESS != status)
+    {
+        PRINT_ERR("Unable to stop DC services\n");
+        return status;
+    }
+
+    memset(&stats,0,sizeof(perf_data_t));
+    stats.averagePacketSizeInBytes = data->packetSize;
+
+
+    /* get the longest start time and longest End time
+     * from the performance stats structure
+     */
+    getLongestCycleCount(&stats,data->performanceStats,data->numberOfThreads);
+
+    /* Get the total number of responses, bytes consumed and bytes produced
+     * for all the threads */
+    for (i=0; i<data->numberOfThreads; i++)
+    {
+        if(CPA_STATUS_FAIL == data->performanceStats[i]->threadReturnStatus)
+        {
+            return CPA_STATUS_FAIL;
+        }
+        averageNumLoops += data->performanceStats[i]->numLoops;
+        stats.retries += data->performanceStats[i]->retries;
+        stats.responses += data->performanceStats[i]->responses;
+        bytesConsumed += data->performanceStats[i]->bytesConsumedPerLoop;
+        bytesProduced += data->performanceStats[i]->bytesProducedPerLoop;
+        dcSetup->compressTestParams.numLoops = data->performanceStats[i]->numLoops;
+        clearPerfStats(data->performanceStats[i]);
+    }
+    /* get the maximum number of cycles Required */
+    numOfCycles = (stats.endCyclesTimestamp - stats.startCyclesTimestamp);
+
+    /*dont assume that all threads submitted all loops
+     * if the averageNumLoops does not equal the plann then that means
+     * the thread exited early, so we need to use the average to calculate the
+     * throughput*/
+    averageNumLoops = averageNumLoops/data->numberOfThreads;
+    if(averageNumLoops != dcSetup->compressTestParams.numLoops)
+    {
+        dcSetup->compressTestParams.numLoops = averageNumLoops;
+    }
+    /* Print Statistics */
+    dcPrintTestData(&(dcSetup->compressTestParams));
+    PRINT("Number of threads      %d\n", data->numberOfThreads);
+    PRINT("Total Responses        %llu\n",(unsigned long long)stats.responses);
+    PRINT("Total Retries          %u\n",stats.retries);
+    PRINT("Clock Cycles Start     %llu\n",stats.startCyclesTimestamp);
+    PRINT("Clock Cycles End       %llu\n",stats.endCyclesTimestamp);
+    if(!signOfLife)
+    {
+        PRINT("Total Cycles           %llu\n", numOfCycles);
+        PRINT("CPU Frequency(kHz)     %u\n",sampleCodeGetCpuFreq());
+        throughput = getDcThroughput(bytesConsumed,
+                numOfCycles, dcSetup->compressTestParams.numLoops);
+        PRINT("Throughput(Mbps)       %u\n", throughput);
+
+        dcCalculateAndPrintCompressionRatio(bytesConsumed,bytesProduced);
+    }
+    return status;
+}
+#endif
+
 CpaStatus dcPrintStats(thread_creation_data_t* data)
 {
     perf_cycles_t numOfCycles = {0};
@@ -890,7 +1050,7 @@ CpaStatus dcPrintStats(thread_creation_data_t* data)
     Cpa32U bytesConsumed = 0, bytesProduced = 0;
     Cpa32U averageNumLoops = 0;
     compression_test_params_t *dcSetup = (compression_test_params_t*)
-                                                            data->setupPtr;
+        data->setupPtr;
 
 
     /* stop DC Services */
@@ -950,7 +1110,7 @@ CpaStatus dcPrintStats(thread_creation_data_t* data)
         PRINT("Total Cycles           %llu\n", numOfCycles);
         PRINT("CPU Frequency(kHz)     %u\n",sampleCodeGetCpuFreq());
         throughput = getDcThroughput(bytesConsumed,
-            numOfCycles, dcSetup->numLoops);
+                numOfCycles, dcSetup->numLoops);
         PRINT("Throughput(Mbps)       %u\n", throughput);
 
         dcCalculateAndPrintCompressionRatio(bytesConsumed,bytesProduced);
@@ -974,6 +1134,23 @@ CpaStatus dcPrintStats(thread_creation_data_t* data)
 			PRINT("Max. Latency (uSecs)   %llu\n", uSecs);
         }
 #endif
+#ifdef STV_ADD_TEST_IDS
+    PRINT("STV Test ID           %s\n", stv_test_id );
+    PRINT("STV Test Name         %s\n", stv_test_id_name );
+
+    if (stv_test_id[0] != 0)
+    {
+        Cpa32U stv_test_number;
+
+        /* As we have a defined number let's increment it
+         * to cover a range of tests, e.g. different packet sizes.
+         * Tester can still override this number with setSTVTestID()
+         */
+        sscanf( stv_test_id, "%06d", &stv_test_number );
+        sprintf( stv_test_id, "%06d", stv_test_number+1 );
+    }
+#endif
+
     }
     return status;
 }
@@ -994,73 +1171,75 @@ void dcPrintTestData(compression_test_params_t* dcSetup)
     PRINT("Session State          ");
     switch(dcSetup->setupData.sessState)
     {
-    case(CPA_DC_STATEFUL):
-        PRINT("STATEFUL\n");
-    break;
-    case(CPA_DC_STATELESS):
-        PRINT("STATELESS\n");
-    break;
-    default:
-        PRINT("Unsupported        %d\n",dcSetup->setupData.sessState);
-        break;
+        case(CPA_DC_STATEFUL):
+            PRINT("STATEFUL\n");
+            break;
+        case(CPA_DC_STATELESS):
+            PRINT("STATELESS\n");
+            break;
+        default:
+            PRINT("Unsupported        %d\n",dcSetup->setupData.sessState);
+            break;
     }
 
     PRINT("Algorithm              ");
     switch(dcSetup->setupData.compType)
     {
-    case(CPA_DC_LZS):
-        PRINT("LZS\n");
-    break;
-    case(CPA_DC_DEFLATE):
-        PRINT("DEFLATE\n");
-    break;
-    default:
-        PRINT("Unsupported        %d\n",dcSetup->setupData.compType);
-        break;
+        case(CPA_DC_LZS):
+            PRINT("LZS\n");
+            break;
+        case(CPA_DC_DEFLATE):
+            PRINT("DEFLATE\n");
+            break;
+        default:
+            PRINT("Unsupported        %d\n",dcSetup->setupData.compType);
+            break;
     }
 
     PRINT("Huffman Type           ");
     switch(dcSetup->setupData.huffType)
     {
-    case(CPA_DC_HT_STATIC):
-        PRINT("STATIC\n");
-    break;
-    case(CPA_DC_HT_FULL_DYNAMIC):
-        PRINT("DYNAMIC\n");
-    break;
-    default:
-        PRINT("Unsupported        %d\n",dcSetup->setupData.huffType);
-        break;
+        case(CPA_DC_HT_STATIC):
+            PRINT("STATIC\n");
+            break;
+        case(CPA_DC_HT_FULL_DYNAMIC):
+            PRINT("DYNAMIC\n");
+            break;
+        default:
+            PRINT("Unsupported        %d\n",dcSetup->setupData.huffType);
+            break;
     }
 
     PRINT("Mode                   ");
     switch(dcSetup->syncFlag)
     {
-    case(CPA_SAMPLE_SYNCHRONOUS):
-        PRINT("SYNCHRONOUS\n");
-    break;
-    case(CPA_SAMPLE_ASYNCHRONOUS):
-        PRINT("ASYNCHRONOUS\n");
-    break;
-    default:
-        PRINT("Unsupported %d\n",dcSetup->syncFlag);
-        break;
+        case(CPA_SAMPLE_SYNCHRONOUS):
+            PRINT("SYNCHRONOUS\n");
+            break;
+        case(CPA_SAMPLE_ASYNCHRONOUS):
+            PRINT("ASYNCHRONOUS\n");
+            break;
+        default:
+            PRINT("Unsupported %d\n",dcSetup->syncFlag);
+            break;
     }
+
+
     PRINT("Direction              ");
     switch(dcSetup->dcSessDir)
     {
-    case(CPA_DC_DIR_COMPRESS):
-        PRINT("COMPRESS");
-    break;
-    case(CPA_DC_DIR_DECOMPRESS):
-        PRINT("DECOMPRESS");
-    break;
-    case(CPA_DC_DIR_COMBINED):
-        PRINT("COMBINED");
-    break;
-    default:
-        PRINT("Unsupported        %d\n",dcSetup->setupData.sessDirection);
-        break;
+        case(CPA_DC_DIR_COMPRESS):
+            PRINT("COMPRESS");
+            break;
+        case(CPA_DC_DIR_DECOMPRESS):
+            PRINT("DECOMPRESS");
+            break;
+        case(CPA_DC_DIR_COMBINED):
+            PRINT("COMBINED");
+            break;
+        default:
+            PRINT("Unsupported        %d\n",dcSetup->setupData.sessDirection);
+            break;
     }
     if(useZlib_g)
     {
@@ -1078,15 +1257,30 @@ void dcPrintTestData(compression_test_params_t* dcSetup)
     PRINT("Corpus                 ");
     switch(dcSetup->corpus)
     {
-    case(CANTERBURY_CORPUS):
-        PRINT("CANTERBURY_CORPUS\n");
-    break;
-    case(CALGARY_CORPUS):
-        PRINT("CALGARY_CORPUS\n");
-    break;
-    case(SIGN_OF_LIFE_CORPUS):
-        PRINT("1ST_32k_OF_CALGARY_CORPUS\n");
-    break;
+        case(CANTERBURY_CORPUS):
+            PRINT("CANTERBURY_CORPUS\n");
+            break;
+        case(CALGARY_CORPUS):
+            PRINT("CALGARY_CORPUS\n");
+            break;
+        case(SIGN_OF_LIFE_CORPUS):
+            PRINT("1ST_32k_OF_CALGARY_CORPUS\n");
+            break;
+        case(CALGARY_SIX_FILES):
+            PRINT("CALGARY_SIX_FILES\n");
+            break;
+        case(CALGARY_FULL_SET):
+            PRINT("CALGARY_FULL_SET\n");
+            break;
+        case(ZERO_LENGTH_FILE):
+            PRINT("ZERO_LENGTH_FILE\n");
+            break;
+        case(OVERFLOW_FILE):
+            PRINT("OVERFLOW_FILE\n");
+            break;
+        case(OVERFLOW_AND_ZERO_FILE):
+            PRINT("OVERFLOW_AND_ZERO_FILE\n");
+            break;
 #ifdef LATENCY_CODE
     /* All zeros corpus. Enables calibrating latencies among different buffer sizes */
     case(ZEROS_CORPUS):
@@ -1144,7 +1338,7 @@ CpaStatus dcCalculateAndPrintCompressionRatio(Cpa32U bytesConsumed,
     }
 #ifdef USER_SPACE
     PRINT("Compression Ratio      %.02f\n",
-                                        ((float)bytesProduced/bytesConsumed));
+            ((float)bytesProduced/bytesConsumed));
     return CPA_STATUS_SUCCESS;
 #endif
 
@@ -1159,7 +1353,7 @@ CpaStatus dcCalculateAndPrintCompressionRatio(Cpa32U bytesConsumed,
 #endif
 
 Cpa32U getDcThroughput(Cpa32U totalBytes, perf_cycles_t cycles,
-            Cpa32U numOfLoops)
+        Cpa32U numOfLoops)
 {
     unsigned long long bytesSent = 0;
     unsigned long long time = cycles;
@@ -1181,14 +1375,14 @@ Cpa32U getDcThroughput(Cpa32U totalBytes, perf_cycles_t cycles,
      * bytes to bytes/milli second or kiloBytes/second*/
     rate = bytesSent * numOfLoops;
     /*rate in kBps*/
-   do_div(rate,time);
-   /*check that the rate is high enough to convert to Megabits per second*/
-   if(rate ==0)
-   {
-       PRINT_ERR("no data was sent to calculate throughput\n");
-       return 0;
-   }
-   /* convert Kilobytes/second to Kilobits/second*/
+    do_div(rate,time);
+    /*check that the rate is high enough to convert to Megabits per second*/
+    if(rate ==0)
+    {
+        PRINT_ERR("no data was sent to calculate throughput\n");
+        return 0;
+    }
+    /* convert Kilobytes/second to Kilobits/second*/
     rate = rate*NUM_BITS_IN_BYTE;
     /*then convert rate from Kilobits/second to Megabits/second*/
     do_div(rate,KILOBITS_IN_MEGABITS);
@@ -1232,11 +1426,11 @@ CpaStatus disableZeroByteRequest(void)
 EXPORT_SYMBOL(disableZeroByteRequest);
 #endif
 /*****************************************************************************
-* * @description
-* Poll the number of dc operations
-* ***************************************************************************/
+ * * @description
+ * Poll the number of dc operations
+ * ***************************************************************************/
 CpaStatus dcPollNumOperations(perf_data_t *pPerfData,
-                CpaInstanceHandle instanceHandle, Cpa64U numOperations)
+        CpaInstanceHandle instanceHandle, Cpa64U numOperations)
 {
     CpaStatus status = CPA_STATUS_FAIL;
 
@@ -1325,3 +1519,103 @@ CpaStatus dynamicHuffmanEnabled(CpaInstanceHandle *dcInstanceHandle,
     }
     return CPA_STATUS_SUCCESS;
 }
+
+CpaStatus dcSampleCreateStatefulContextBuffer(Cpa32U buffSize,
+        Cpa32U metaSize,CpaBufferList **pBuffListArray, Cpa32U nodeId)
+{
+    CpaStatus status = CPA_STATUS_SUCCESS;
+
+
+    *pBuffListArray = qaeMemAllocNUMA((sizeof(CpaBufferList)),
+            nodeId, BYTE_ALIGNMENT_64);
+    if(NULL== (*pBuffListArray))
+    {
+        PRINT_ERR(" Unable to allocate Buffers List Array\n");
+        return CPA_STATUS_FAIL;
+    }
+    (*pBuffListArray)->numBuffers = ONE_BUFFER_DC;
+    (*pBuffListArray)->pBuffers =
+        qaeMemAllocNUMA((sizeof(CpaFlatBuffer)),
+                nodeId, BYTE_ALIGNMENT_64);
+    if(NULL == (*pBuffListArray)->pBuffers)
+    {
+        PRINT_ERR(" Unable to allocate Flat Buffers\n");
+        qaeMemFreeNUMA((void**)pBuffListArray);
+        return CPA_STATUS_FAIL;
+    }
+    if(metaSize)
+    {
+        (*pBuffListArray)->pPrivateMetaData =
+            (Cpa8U *)qaeMemAllocNUMA(metaSize, nodeId, BYTE_ALIGNMENT_64);
+        if(NULL == (*pBuffListArray)->pPrivateMetaData)
+        {
+            PRINT_ERR(" Unable to allocate pPrivateMetaData Buffers\n");
+            qaeMemFreeNUMA((void**)&(*pBuffListArray)->pBuffers);
+            qaeMemFreeNUMA((void**)pBuffListArray);
+            return CPA_STATUS_FAIL;
+        }
+    }
+    else
+    {
+        (*pBuffListArray)->pPrivateMetaData = NULL;
+    }
+
+
+    /* Allocate Flat buffer for each buffer List */
+    (*pBuffListArray)->pBuffers->dataLenInBytes = buffSize;
+    if (0 == buffSize)
+    {
+        (*pBuffListArray)->pBuffers->pData = NULL;
+    }
+    else
+    {
+        (*pBuffListArray)->pBuffers->pData =
+            qaeMemAllocNUMA(buffSize, nodeId, BYTE_ALIGNMENT_64);
+        if(NULL == (*pBuffListArray)->pBuffers->pData )
+        {
+            PRINT(" Unable to allocate Flat buffer\n");
+            qaeMemFreeNUMA((void**)&(*pBuffListArray)->pPrivateMetaData);
+            qaeMemFreeNUMA((void**)&(*pBuffListArray)->pBuffers);
+            qaeMemFreeNUMA((void**)pBuffListArray);
+            return CPA_STATUS_FAIL;
+        }
+        memset((*pBuffListArray)->pBuffers->pData, 0 ,buffSize);
+    }
+
+
+    return status;
+}
+
+CpaStatus dcSampleFreeStatefulContextBuffer3(CpaBufferList *pBuffListArray)
+{
+    CpaStatus status = CPA_STATUS_SUCCESS;
+
+    if(NULL == pBuffListArray)
+    {
+        PRINT_ERR(" Buffers List Array is NULL\n");
+        /* Return Silent */
+        return CPA_STATUS_FAIL;
+    }
+
+    if(NULL != pBuffListArray->pPrivateMetaData)
+    {
+       qaeMemFreeNUMA((void**)&pBuffListArray->
+               pPrivateMetaData);
+    }
+    if(NULL != pBuffListArray->pBuffers)
+    {
+       if(NULL != pBuffListArray->pBuffers->pData)
+       {
+           qaeMemFreeNUMA((void**)&pBuffListArray->
+                   pBuffers->pData);
+       }
+       qaeMemFreeNUMA((void**)&pBuffListArray->pBuffers);
+    }
+    if(NULL != pBuffListArray)
+    {
+       qaeMemFreeNUMA((void**)&pBuffListArray);
+    }
+
+    return status;
+}
+

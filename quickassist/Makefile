@@ -4,7 +4,7 @@
 # 
 #   GPL LICENSE SUMMARY
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 # 
 #   This program is free software; you can redistribute it and/or modify 
 #   it under the terms of version 2 of the GNU General Public License as
@@ -26,7 +26,7 @@
 # 
 #   BSD LICENSE 
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 #   All rights reserved.
 # 
 #   Redistribution and use in source and binary forms, with or without 
@@ -56,16 +56,8 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # 
 # 
-#  version: QAT1.5.L.1.11.0-36
+#  version: QAT1.5.L.1.13.0-19
 ################################################################
-
-export ICP_ROOT?=$(PWD)/..
-export ICP_BUILD_OUTPUT=$(ICP_ROOT)/build
-export ICP_BUILDSYSTEM_PATH=$(ICP_ROOT)/quickassist/build_system/
-export ICP_TOOLS_TARGET="accelcomp"
-export ICP_ENV_DIR=$(ICP_ROOT)/quickassist/build_system/build_files/env_files
-export ICP_NONBLOCKING_PARTIALS_PERFORM=1
-export KERNEL_SOURCE_ROOT=/lib/modules/$(shell uname -r)/build
 
 PATH_TO_FILE=/lib64 /lib /lib64/* /lib/* /usr /usr/*
 KERNEL_HEADER_FILE_LIST=$(sort $(shell cat $(ICP_BUILD_OUTPUT)/kernel_header_file_list.txt))
@@ -79,16 +71,7 @@ endif
 
 DATE=$(shell date '+%m_%d_%y')
 
-ifdef WITH_CPA_MUX
-ifdef ICP_DC_ONLY
-$(error ICP_DC_ONLY build flag is not supported with MUX)
-endif
-BASENAME=qat_1_5_mux
-endif
-
-ifndef WITH_CPA_MUX
 BASENAME=icp_qa_al
-endif
 
 ifeq ($(ADF_PLATFORM), ACCELDEVVF)
 	DRIVER=$(BASENAME)_vf.ko
@@ -103,7 +86,6 @@ HAL_PATH=$(ICP_ROOT)/quickassist/utilities/downloader/
 HAL_LIB_PATH=$(ICP_ROOT)/quickassist/utilities/downloader/
 QAT_FW_PATH=$(ICP_ROOT)/quickassist/lookaside/firmware/
 LAC_PATH=$(ICP_ROOT)/quickassist/lookaside/access_layer/
-CPA_MUX_PATH=$(ICP_ROOT)/../cpa_mux/src
 CONFIG_PATH=$(ICP_ROOT)/quickassist/config/
 ICP_TOOLS_TARGET?=accelcomp
 ADF_PATH = $(ICP_ROOT)/quickassist/adf/
@@ -113,66 +95,34 @@ export ICP_ACCEL_INC=YES
 LAC_LIB_DIR=$(LAC_PATH)/build/libs
 export DRBG_POLL_AND_WAIT=1
 #Release Package build steps
-ALL_TARGETS =  clean output_dir lac_lib_dir libosal libosal_user hal adf adf_user lac lac_user qat-fw install_scripts
+ALL_TARGETS =  clean lac_lib_dir libosal libosal_user hal adf adf_user lac lac_user qat-fw install_scripts
+ALL_TARGETS_CI =  lac_lib_dir lac_ci lac_user_ci qat-fw install_scripts
 ICP_ARCH_USER?=`uname -m`
 
 ifdef ICP_SRIOV
 ALL_TARGETS += libosalvf adfvf lacvf libosal_uservf
 endif
 
-.PHONY: all
 all: $(ALL_TARGETS)
 	@echo 'Build Done';
 
-.PHONY: install
-install: install_kmod install_utils
-	@echo 'Installation complete.';
+all_ci: $(ALL_TARGETS_CI)
+	@echo 'Build Done';
 
-.PHONY: install_kmod
-install_kmod:
-	@install -m 0644 $(ICP_BUILD_OUTPUT)/*.ko /lib/modules/`uname -r`/kernel/drivers/crypto
-	
-
-.PHONY: install_utils
-install_utils:
-	@install -m 0644 $(ICP_BUILD_OUTPUT)/*.bin /lib/firmware
-	@install -m 0755 $(ICP_BUILD_OUTPUT)/adf_ctl /sbin
-	@install -m 0644 $(ICP_BUILD_OUTPUT)/*.a /usr/lib
-	@install -m 0755 $(ICP_BUILD_OUTPUT)/*.so /usr/lib
-	@ldconfig
-	@depmod -a
-	@echo "sha512" >> /etc/modules-load.d/quickassist.conf
-	@echo "icp_qa_al" >> /etc/modules-load.d/quickassist.conf
-	@echo 'KERNEL=="icp_adf_ctl" MODE="0600"' > /lib/udev/rules.d/80-c2xxx_qa.rules
-	@echo 'KERNEL=="icp_dev[0-9]*" MODE="0600"' >> /lib/udev/rules.d/80-c2xxx_qa.rules
-	@echo 'KERNEL=="icp_dev_mem?" MODE="0600"' >> /lib/udev/rules.d/80-c2xxx_qa.rules
-	@udevadm control --reload-rules
-	@udevadm trigger
-	@install -m 0644 $(ICP_BUILD_OUTPUT)/c2xxx_qa_dev0.conf /etc
-	@install -m 0644 $(ICP_BUILD_OUTPUT)/quickassist.service /lib/systemd/system
-	@systemctl daemon-reload
-	@modprobe icp_qa_al
-	@sleep 2
-	@systemctl enable quickassist
-	@systemctl start quickassist
-
-.PHONY: user
 user: lac_lib_dir libosal_user adf_user lac_user
-
-.PHONY: kernel
 kernel: lac_lib_dir libosal hal adf lac qat-fw install_scripts
 
-.PHONY: install_scripts
 install_scripts:
 	@echo ; echo 'Copying Install Scripts';
-	@cp $(ICP_BUILDSYSTEM_PATH)/build_files/quickassist.service $(ICP_BUILD_OUTPUT)/;
+	@cp $(ICP_BUILDSYSTEM_PATH)/build_files/qat_service $(ICP_BUILD_OUTPUT)/;
+	@chmod 750 $(ICP_BUILD_OUTPUT)/qat_service;
 	@cp $(CONFIG_PATH)/dh89xxcc_qa_dev0.conf $(ICP_BUILD_OUTPUT)/;
 	@cp $(CONFIG_PATH)/dh89xxcc_qa_dev1.conf $(ICP_BUILD_OUTPUT)/;
 	@cp $(CONFIG_PATH)/dh89xxcc_qa_dev0_single_accel.conf $(ICP_BUILD_OUTPUT)/;
 	@cp $(CONFIG_PATH)/c2xxx_qa_dev0.conf $(ICP_BUILD_OUTPUT)/;
 
 
-.PHONY: libosal
+#libosal needed by hal and adf
 libosal: output_dir lac_lib_dir
 	@echo ; echo 'Building lib OSAL';
 	@cd $(OSAL_PATH)/src && export ONE_KO_RELEASE_PACKAGE=1 && $(MAKE) ICP_ENV_DIR=$(ICP_TOP_ENV) OS_LEVEL=linux ICP_OS_LEVEL=kernel_space lib_kernel
@@ -180,28 +130,36 @@ libosal: output_dir lac_lib_dir
 	@cd $(OSAL_PATH)/src  && cp ./linux/kernel_space/build/linux_2.6/kernel_space/libosal.a ./build/linux_2.6/kernel_space/
 	@cd $(OSAL_PATH)/src  && cp ./linux/kernel_space/build/linux_2.6/kernel_space/libosal.a $(LAC_LIB_DIR)/
 
+libosal_ci: output_dir lac_lib_dir
+	@cd $(OSAL_PATH)/src  && cp ./linux/kernel_space/build/linux_2.6/kernel_space/libosal.a $(LAC_LIB_DIR)/
 
-.PHONY: libosal_user
+
+#userspace osal library
 libosal_user: output_dir lac_lib_dir
 	@echo ; echo 'Building OSAL for user space';
 	@cd $(OSAL_PATH)/src && $(MAKE) ARCH=$(ICP_ARCH_USER) ICP_ENV_DIR=$(ICP_TOP_ENV) OS_LEVEL=linux ICP_OS_LEVEL=user_space lib;\
 	echo ; echo 'Copying OSAL library';
 	cp $(OSAL_PATH)/src/build/linux_2.6/user_space/libosal.a $(ICP_BUILD_OUTPUT)/;
 
-.PHONY: hal
 hal: output_dir libosal
 	@echo ; echo 'Building Hal Libs';
 	@cd $(HAL_PATH)/Target_CoreLibs/makDefs && $(MAKE) -f coreLibs_kernel.mak ICP_TOOLS_TARGET=$(ICP_TOOLS_TARGET);
 	@echo ; echo 'Copying HAL Binary to $(LAC_LIB_DIR)';
 	@cp $(HAL_LIB_PATH)/lib_linux_le/$(ICP_TOOLS_TARGET)/icp_ae_loader_kernel.a $(LAC_LIB_DIR)/
 
-.PHONY: adf
+hal_ci: output_dir libosal_ci
+	@echo ; echo 'Copying HAL Binary to $(LAC_LIB_DIR)';
+	@cp $(HAL_LIB_PATH)/lib_linux_le/$(ICP_TOOLS_TARGET)/icp_ae_loader_kernel.a $(LAC_LIB_DIR)/
+
 adf: output_dir lac_lib_dir libosal hal
 	@echo ; echo 'Building ADF';
 	@cd $(ADF_PATH) && export ADF_PLATFORM=ACCELDEV && export ICP_ENV_DIR=$(ICP_TOP_ENV) export ONE_KO_RELEASE_PACKAGE=1 && ICP_OS_LEVEL=kernel_space && $(MAKE);
 	cp $(ADF_PATH)/build/linux_2.6/libadf.a $(LAC_LIB_DIR)/;
 
-.PHONY: libosalvf
+adf_ci: output_dir lac_lib_dir libosal_ci hal_ci
+	@cd $(ADF_PATH) && export ADF_PLATFORM=ACCELDEV && export ICP_ENV_DIR=$(ICP_TOP_ENV) && export ONE_KO_RELEASE_PACKAGE=1 && ICP_OS_LEVEL=kernel_space && $(MAKE);
+	cp $(ADF_PATH)/build/linux_2.6/libadf.a $(LAC_LIB_DIR)/;
+
 libosalvf: output_dir lac_lib_dir
 	@echo ; echo 'Building lib OSAL';
 	@cd $(OSAL_PATH)/src && export ICP_WITHOUT_IOMMU=1 && export ONE_KO_RELEASE_PACKAGE=1 && $(MAKE) ICP_ENV_DIR=$(ICP_TOP_ENV) OS_LEVEL=linux ICP_OS_LEVEL=kernel_space lib_kernel
@@ -209,46 +167,46 @@ libosalvf: output_dir lac_lib_dir
 	@cd $(OSAL_PATH)/src  && cp ./linux/kernel_space/build/linux_2.6/kernel_space/libosal.a ./build/linux_2.6/kernel_space/
 	@cd $(OSAL_PATH)/src  && cp ./linux/kernel_space/build/linux_2.6/kernel_space/libosal.a $(LAC_LIB_DIR)/
 
-.PHONY: libosal_uservf
+#userspace osal library
 libosal_uservf: output_dir lac_lib_dir
 	@echo ; echo 'Building OSAL for user space';
 	@cd $(OSAL_PATH)/src && export ICP_WITHOUT_IOMMU=1 && $(MAKE) ICP_ENV_DIR=$(ICP_TOP_ENV) OS_LEVEL=linux ICP_OS_LEVEL=user_space lib;\
 	echo ; echo 'Copying OSAL library';
 	cp $(OSAL_PATH)/src/build/linux_2.6/user_space/libosal.a $(ICP_BUILD_OUTPUT)/;
 
-.PHONY: adfvf
 adfvf: output_dir lac_lib_dir libosalvf
 	@echo ; echo 'Building ADFVF';
 	@cd $(ADF_PATH) && export ADF_PLATFORM=ACCELDEVVF && export ICP_ENV_DIR=$(ICP_TOP_ENV) export ONE_KO_RELEASE_PACKAGE=1 && ICP_OS_LEVEL=kernel_space && $(MAKE);
 	cp $(ADF_PATH)/build/linux_2.6/libadf.a $(LAC_LIB_DIR)/;
 
-.PHONY: adf_user
 adf_user: output_dir lac_lib_dir libosal_user
 	@echo ; echo 'Building user ADF';
 	@cd $(ADF_PATH) && export ADF_PLATFORM=ACCELDEV && export ICP_ENV_DIR=$(ICP_TOP_ENV) && export ONE_KO_RELEASE_PACKAGE=1 && ICP_OS_LEVEL=user_space && $(MAKE) ARCH=$(ICP_ARCH_USER) adf_user;
 	cp $(ADF_PATH)/build/linux_2.6/libadf_proxy.a $(ICP_BUILD_OUTPUT)/;
 	cp $(ADF_PATH)/build/linux_2.6/adf_ctl $(ICP_BUILD_OUTPUT)/;
 
-.PHONY: lac
+adf_user_ci: output_dir lac_lib_dir
+	@echo ; echo 'Building user ADF';
+	@cd $(ADF_PATH) && export ADF_PLATFORM=ACCELDEV && export ICP_ENV_DIR=$(ICP_TOP_ENV) && export ONE_KO_RELEASE_PACKAGE=1 && ICP_OS_LEVEL=user_space && $(MAKE) ARCH=$(ICP_ARCH_USER) adf_user;
+	cp $(ADF_PATH)/build/linux_2.6/libadf_proxy.a $(ICP_BUILD_OUTPUT)/;
+	cp $(ADF_PATH)/build/linux_2.6/adf_ctl $(ICP_BUILD_OUTPUT)/;
+
 lac: output_dir libosal hal adf
 	@echo ; echo 'Building LAC';
-ifdef WITH_CPA_MUX
-	@cp $(CPA_MUX_PATH)/Module.symvers $(LAC_PATH)/src/
-endif
 
 	@cd $(LAC_PATH) && export ICP_ENV_DIR=$(ICP_TOP_ENV) && export ONE_KO_RELEASE_PACKAGE=1 && cd src && $(MAKE) ICP_OS_LEVEL=kernel_space OS_LEVEL=linux;
 	@cp $(LAC_PATH)/src/build/linux_2.6/kernel_space/$(DRIVER) $(ICP_BUILD_OUTPUT)/;
 
-.PHONY: lacvf
+lac_ci: output_dir libosal_ci hal_ci adf_ci
+	@echo ; echo 'Building LAC';
+	@cd $(LAC_PATH) && export ICP_ENV_DIR=$(ICP_TOP_ENV) && export ONE_KO_RELEASE_PACKAGE=1 && cd src && $(MAKE) ICP_OS_LEVEL=kernel_space OS_LEVEL=linux;
+	@cp $(LAC_PATH)/src/build/linux_2.6/kernel_space/$(DRIVER) $(ICP_BUILD_OUTPUT)/;
+
 lacvf: output_dir libosalvf adfvf
 	@echo ; echo 'Building LACVF';
-ifdef WITH_CPA_MUX
-	@cp $(CPA_MUX_PATH)/Module.symvers $(LAC_PATH)/src/
-endif
 	@cd $(LAC_PATH) && export ADF_PLATFORM=ACCELDEVVF && export ICP_ENV_DIR=$(ICP_TOP_ENV) && export ONE_KO_RELEASE_PACKAGE=1 && cd src && $(MAKE) ICP_OS_LEVEL=kernel_space OS_LEVEL=linux;
 	@cp $(LAC_PATH)/src/build/linux_2.6/kernel_space/$(BASENAME)_vf.ko $(ICP_BUILD_OUTPUT)/;
 
-.PHONY: lac_user
 lac_user: output_dir libosal_user adf_user
 	@echo ; echo 'Building LAC in user space';
 	@cd $(LAC_PATH) && export ICP_ENV_DIR=$(ICP_TOP_ENV) && export ONE_KO_RELEASE_PACKAGE=1 && cd src && $(MAKE) ARCH=$(ICP_ARCH_USER) lib_static ICP_OS_LEVEL=user_space;
@@ -256,19 +214,22 @@ lac_user: output_dir libosal_user adf_user
 	@cd $(LAC_PATH) && export ICP_ENV_DIR=$(ICP_TOP_ENV) && export ONE_KO_RELEASE_PACKAGE=1 && cd src && $(MAKE) ARCH=$(ICP_ARCH_USER) lib_shared ICP_OS_LEVEL=user_space;
 	cp $(LAC_PATH)/src/build/linux_2.6/user_space/lib$(BASENAME)_s.so $(ICP_BUILD_OUTPUT)/;
 
-.PHONY: qat-fw
+lac_user_ci: output_dir 
+	@echo ; echo 'Building LAC in user space';
+	@cd $(LAC_PATH) && export ICP_ENV_DIR=$(ICP_TOP_ENV) && export ONE_KO_RELEASE_PACKAGE=1 && cd src && $(MAKE) ARCH=$(ICP_ARCH_USER) lib_static ICP_OS_LEVEL=user_space;
+	cp $(LAC_PATH)/src/build/linux_2.6/user_space/lib$(BASENAME).a $(ICP_BUILD_OUTPUT)/;
+	@cd $(LAC_PATH) && export ICP_ENV_DIR=$(ICP_TOP_ENV) && export ONE_KO_RELEASE_PACKAGE=1 && cd src && $(MAKE) ARCH=$(ICP_ARCH_USER) lib_shared ICP_OS_LEVEL=user_space;
+	cp $(LAC_PATH)/src/build/linux_2.6/user_space/lib$(BASENAME)_s.so $(ICP_BUILD_OUTPUT)/;
+
 qat-fw: output_dir
-	@cp -f $(QAT_FW_PATH)/icp_qat_ae.mof $(ICP_BUILD_OUTPUT)/mof_firmware.bin;
 	@echo ; echo 'Copying QAT-FW Binary';
+	@cp -f $(QAT_FW_PATH)/icp_qat_ae.mof $(ICP_BUILD_OUTPUT)/mof_firmware.bin;
 	@echo ; echo 'Copying MMP Binary';
 	@cp -f $(QAT_FW_PATH)/icp_qat_pke.mof $(ICP_BUILD_OUTPUT)/mmp_firmware.bin;
 	@echo ; echo 'Copying C2XXX QAT-FW Binary';
 	@cp -f $(QAT_FW_PATH)/icp_qat_nae.mof $(ICP_BUILD_OUTPUT)/mof_firmware_c2xxx.bin;
 	@echo ; echo 'Copying C2XXX MMP Binary';
 	@cp -f $(QAT_FW_PATH)/icp_qat_pke.mof $(ICP_BUILD_OUTPUT)/mmp_firmware_c2xxx.bin;
-
-.PHONY: clean
-.NOTPARALLEL: clean
 clean:
 	@echo ; echo 'Cleaning OSAL';
 	@cd $(OSAL_PATH)/src && $(MAKE) ICP_ENV_DIR=$(ICP_TOP_ENV) ICP_OS_LEVEL=kernel_space OS_LEVEL=linux osal_clean;
@@ -283,34 +244,34 @@ clean:
 	@echo ; echo 'Cleaning Binaries in Output Dir';
 	@rm -rf $(ICP_BUILD_OUTPUT);
 	@rm -rf $(LAC_LIB_DIR);
-	@cd $(ICP_ROOT);
-	@find -type f -name "*.cmd" | xargs rm -f
-	@find -type f -name "*.o" | xargs rm -f
-	@find -type f -name "Module.symvers" | xargs rm -f
 	@echo 'Cleaning done';
 
-.PHONY: output_dir
-output_dir: clean
+clean_ci:
+	@echo ; echo 'Cleaning LAC';
+	@cd $(LAC_PATH) && export ICP_ENV_DIR=$(ICP_TOP_ENV) && cd src && $(MAKE) lac_clean ICP_OS_LEVEL=kernel_space;
+	@cd $(LAC_PATH) && export ICP_ENV_DIR=$(ICP_TOP_ENV) && cd src && $(MAKE) lac_clean ICP_OS_LEVEL=user_space;
+	@echo ; echo 'Cleaning Binaries in Output Dir';
+	@rm -rf $(ICP_BUILD_OUTPUT);
+	@rm -rf $(LAC_LIB_DIR);
+	@echo 'Cleaning done';
+
+
+output_dir:
 	test -d $(ICP_BUILD_OUTPUT) || mkdir -p $(ICP_BUILD_OUTPUT);
 
-.PHONY: lac_lib_dir
-lac_lib_dir: clean
+lac_lib_dir:
 	test -d $(LAC_LIB_DIR) || mkdir -p $(LAC_LIB_DIR);
 
-.PHONY: osal_depend
 osal_depend:
 	@cd $(OSAL_PATH)/src; grep "include <linux*" `find . -iname "*.c"` | cut -d '<' -f2 | cut -d '/' -f2 | cut -d '>' -f1 | sort | uniq > ${ICP_BUILD_OUTPUT}/temp_list.txt;  
 
-.PHONY: adf_depend
 adf_depend:
 	@cd $(ADF_PATH); grep "include <linux*" `find . -iname "*.c"` | cut -d '<' -f2 | cut -d '/' -f2 | cut -d '>' -f1 | sort | uniq  >> ${ICP_BUILD_OUTPUT}/temp_list.txt;
 
-.PHONY: lac_depend
 lac_depend:
 	@cd $(LAC_PATH)/src; grep "include <linux*" `find . -iname "*.c"` | cut -d '<' -f2 | cut -d '/' -f2 | cut -d '>' -f1 | sort | uniq >> ${ICP_BUILD_OUTPUT}/temp_list.txt;
 	@sort ${ICP_BUILD_OUTPUT}/temp_list.txt | uniq > ${ICP_BUILD_OUTPUT}/kernel_header_file_list.txt;rm ${ICP_BUILD_OUTPUT}/temp_list.txt;
 
-.PHONY: depend
 depend: output_dir osal_depend adf_depend lac_depend
 	@echo -e "Building kernel source header file dependency list; Refer ${ICP_BUILD_OUTPUT}/kernel_header_file_list.txt for header files which are used to build other kernel space objects and binaries\n"; 
 	@for file in  $(KERNEL_HEADER_FILE_LIST); do \

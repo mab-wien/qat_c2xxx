@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  *****************************************************************************/
 
@@ -132,23 +132,13 @@ static int adf_debug_show(struct seq_file *sfile, void *v)
 {
         debug_file_info_t* file_info = sfile->private;
         if (file_info && file_info->seq_read && file_info->page) {
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0))
                 int ret = 0, old_offset = file_info->offset;
-#else
-		int old_offset = file_info->offset;
-#endif
                 file_info->offset =
                                    file_info->seq_read(file_info->private_data,
                                    file_info->page, PAGE_SIZE - 1,
                                    file_info->offset);
-
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0))
                 ret = seq_puts(sfile, (char*)file_info->page);
                 if (ret) {
-#else
-		seq_puts(sfile, (char*)file_info->page);
-		if (seq_has_overflowed(sfile)) {
-#endif
                         /* run out of space - need to reprint */
                         file_info->offset = old_offset;
                 }

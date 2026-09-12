@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  *****************************************************************************/
 
@@ -93,8 +93,6 @@
 #define USER_SUBSYSTEM_NAME     ("ADF_USER_PROXY")
 #define TIME_DELAY              (240)
 #define TIME_TO_SLEEP_IN_MS     (80)
-
-STATIC const char* thread_name = "adf_orphan_kthread";
 
 /*
  * Increase module usage counter function
@@ -132,12 +130,6 @@ typedef struct orphan_rings_list_s {
 STATIC orphan_rings_list_t *orphans_list_head = NULL;
 STATIC orphan_rings_list_t *orphans_list_tail = NULL;
 STATIC ICP_SPINLOCK orphan_list_lock;
-
-/*
- * flag that prevents multiple orphan threads
- * running at the same time
- */
-STATIC OsalAtomic thread_running_flag;
 
 /*
  * adf_user_proxyEventGetPut
@@ -186,9 +178,9 @@ CpaStatus adf_user_proxyEventGetPut(icp_accel_dev_t *accel_dev,
 }
 
 /*
- * kthread function that will clean all the orphans rings
+ * Function that will clean all the orphans rings
  * in the background if the rings are not used
- * This function is kicked off in a separate thread from
+ * This function is kicked off from
  * adf_userProcessDisconnect function. The idea is that when a process gets
  * killed while having allocated rings and some pending requests we can
  * not release the rings and free the ring's memory as MEs will write to
@@ -288,8 +280,6 @@ STATIC void* clean_orphan_list(void* arg)
                                           orphans_list_head);
                 ICP_SPINLOCK_UNLOCK(&orphan_list_lock);
 
-                CLEAR_STATUS_BIT(process_rings->pAccelDev->adfSubsystemStatus,
-                                    ADF_STATUS_ORPHAN_TH_RUNNING);
                 process_rings_next = process_rings->pNext;
                 ICP_FREE(process_rings);
                 process_rings = process_rings_next;
@@ -396,9 +386,6 @@ STATIC void* clean_orphan_list(void* arg)
             ICP_MSLEEP(TIME_TO_SLEEP_IN_MS);
         }
     }
-    /* unset the running flag and exit */
-    adf_put_module();
-    osalAtomicSet(1, &thread_running_flag);
     return NULL;
 }
 
@@ -1082,8 +1069,6 @@ CpaStatus adf_userProcessDisconnect(void** proxyPrivateData)
     adf_user_process_dyn_instances_list_t *pDynInstanceList = NULL;
     icp_dyn_instance_handle_t *pDynHandle = NULL;
     orphan_rings_list_t *list = NULL;
-    OsalThread thread;
-    OsalThreadAttr thread_attr;
     int have_rings = 0;
 
     pUserProc = (adf_user_process_t*) *proxyPrivateData;
@@ -1204,39 +1189,17 @@ CpaStatus adf_userProcessDisconnect(void** proxyPrivateData)
 
         if (have_rings)
         {
+            SET_STATUS_BIT(pAccelDev->adfSubsystemStatus,
+                               ADF_STATUS_ORPHAN_TH_RUNNING);
             /* add a new entry to the orphan list */
             ICP_SPINLOCK_LOCK(&orphan_list_lock);
             ICP_ADD_ELEMENT_TO_END_OF_LIST(list, orphans_list_tail,
                                            orphans_list_head);
             ICP_SPINLOCK_UNLOCK(&orphan_list_lock);
-            SET_STATUS_BIT(pAccelDev->adfSubsystemStatus,
-                               ADF_STATUS_ORPHAN_TH_RUNNING);
 
-            /* kick off a thread that will clean the list
-             * if it is not already running */
-            if(osalAtomicDecAndTest(&thread_running_flag))
-            {
-                /* Make sure ADF could not be rmmod till the thread
-                 * will finish - otherwise do not even start it */
-                if(adf_get_module())
-                {
-                    thread_attr.name = (char*)thread_name;
-                    osalThreadCreate(&thread, &thread_attr,
-                               (OsalVoidFnVoidPtr)clean_orphan_list, NULL);
-                    osalThreadStart(&thread);
-                }
-                else
-                {
-                    /* We are in real trouble now - cannot rm the rings as
-                     * AE may write back to it and if we don't clean them
-                     * we will have mem leak */
-                    ADF_ERROR("Can not increase module usage counter.\n");
-                    osalAtomicSet(1, &thread_running_flag);
-                    stat = CPA_STATUS_FAIL;
-                    CLEAR_STATUS_BIT(pAccelDev->adfSubsystemStatus,
-                               ADF_STATUS_ORPHAN_TH_RUNNING);
-                }
-            }
+            clean_orphan_list(NULL);
+            CLEAR_STATUS_BIT(pAccelDev->adfSubsystemStatus,
+                             ADF_STATUS_ORPHAN_TH_RUNNING);
         }
         while (pDynInstanceList && pDynInstanceList->listHead)
         {
@@ -1316,7 +1279,7 @@ STATIC CpaStatus user_proxy_EventHandler(icp_accel_dev_t *accel_dev,
 CpaStatus adf_userSpaceRegister(void)
 {
     ICP_SPINLOCK_INIT(&orphan_list_lock);
-    osalAtomicSet(1, &thread_running_flag);
+    //osalAtomicSet(1, &thread_running_flag);
 
     user_space_reg_handle.subsystem_name  = subsystem_name;
     user_space_reg_handle.subserviceEventHandler = user_proxy_EventHandler;

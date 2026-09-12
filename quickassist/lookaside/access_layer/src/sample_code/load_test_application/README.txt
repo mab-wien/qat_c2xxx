@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  *****************************************************************************/
 
@@ -96,11 +96,13 @@ This script assumes that the user installed the driver package to the
 /DH895xCC_Release directory, if an alternate directory was used, please update
 the ICP_ROOT=/ variable location in the setup_me_load_test.sh script.
 
+NOTE: For Upstream driver, update the ICP_ROOT=/Package directory
 
 Execute the script with the "source" command:
     source setup_load_test_env.sh
 
 To build the application, execute the following commands from a bash shell:
+NOTE: For Upstream driver, export WITH_UPSTREAM=1
     rm -rf build/ && make clean && make
 
 The resulting accel_load_test application will be created in the 
@@ -114,6 +116,15 @@ for e.g.
 (dh895xcc_qa_dev{n}.conf) from config_files/ to /etc/.
 (dh89xxcc_qa_dev{n}.conf) from config_files/ to /etc/.
 (cxxx_qa_dev{n}.conf) from config_files/ to /etc/.
+
+NOTE: For Upstream driver, copy the corresponding configuration
+files from config_files/ to /etc/.
+  
+for e.g.
+
+dh895xcc_dev0_load_test.conf from config_files/ to /etc/dh895xcc_dev0.conf
+c6xx_dev0_load_test.conf from config_files/ to /etc/c6xx_dev{n}.conf
+c3xxx_dev0_load_test.conf from config_files/ to /etc/c3xxx_dev0.conf
 
 Configuration files for SKU2 are also included, where a single accelerator
 is available on each device.
@@ -139,6 +150,13 @@ The application can be run with arguments:
     ./build/linux_2.6/user_space/accel_load_test numDc=12 numPke=6 numCipher=12 numAuth=12 numTrng=2 numLoops=n
     ./build/linux_2.6/user_space/accel_load_test numDc=6 numPke=6 numCipher=6 numAuth=6 numTrng=2 numLoops=n
     ./build/linux_2.6/user_space/accel_load_test numDc=0 numPke=2 numCipher=6 numAuth=6 numTrng=0 numLoops=n
+
+NOTE: For Upstream driver, application can be run arguments:
+
+ For Legacy:
+    ./build/linux_2.6/user_space/accel_load_test numDc=12 numPke=6 numCipher=12 numAuth=12 numLoops=n
+ For Upstream:
+    ./build/linux_2.6/user_space/accel_load_test numDc=6 numPke=6 numCipher=6 numAuth=4 numLoops=n
 
 Besides, this application provides other arguments, for instance, numAlgchain(
 alternative for Cipher and Auth), symPacketSize, dcPacketSize, and numLoops. 

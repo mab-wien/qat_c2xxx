@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  ***************************************************************************/
 
@@ -138,6 +138,8 @@ extern Cpa32U dcPollingInterval_g;
 int	latency_debug = 0; /* set to 1 for debug PRINT() */
 int latency_single_buffer_mode = 0; /* set to 1 for single buffer processing */
 int latency_enable = 0; /* set to 1 for enable latency testing */
+CpaCySymCipherDirection latencyCipherDirection = CPA_CY_SYM_CIPHER_DIRECTION_ENCRYPT;
+extern CpaCySymCipherDirection cipherDirection_g;
 
 /* This function is used for enabling debug when LATENCY_CODE is defined
  * for the build. Where a non-zero argument enables debug and a 0 disables it.
@@ -183,6 +185,65 @@ int isLatencyEnabled()
 }
 
 EXPORT_SYMBOL(isLatencyEnabled);
+
+/*
+ * The setupSymmetricDpTest() function has the encrypt / decrypt
+ * direction hard coded to CPA_CY_SYM_CIPHER_DIRECTION_ENCRYPT.
+ * This function overrides this for LATENCY_CODE builds.
+ * Use setLatencyCipherDirection() before calling setupCipherDpTest().
+ */
+CpaCySymCipherDirection getLatencyCipherDirection()
+{
+    if (latency_debug)
+    {
+        if (latencyCipherDirection == CPA_CY_SYM_CIPHER_DIRECTION_ENCRYPT)
+        {
+            PRINT( "%s: latencyCipherDirection is ENCRYPT\n", __FUNCTION__ )
+        }
+        else
+        {
+            PRINT( "%s: latencyCipherDirection is DECRYPT\n", __FUNCTION__ )
+        }
+    }
+    return latencyCipherDirection;
+}
+EXPORT_SYMBOL(getLatencyCipherDirection);
+
+
+/*
+ * The setupSymmetricDpTest() function has the encrypt / decrypt
+ * direction hard coded to CPA_CY_SYM_CIPHER_DIRECTION_ENCRYPT.
+ * This function overrides this for LATENCY_CODE builds.
+ * Use setLatencyCipherDirection() before calling setupCipherDpTest().
+ */
+void setLatencyCipherDirection( CpaCySymCipherDirection direction )
+{
+    switch( direction ) {
+    case CPA_CY_SYM_CIPHER_DIRECTION_ENCRYPT:
+        if (latency_debug) {
+            PRINT( "%s: latencyCipherDirection is now ENCRYPT\n",
+                    __FUNCTION__ )
+        }
+        latencyCipherDirection = direction;
+        cipherDirection_g = latencyCipherDirection;
+        break;
+
+    case CPA_CY_SYM_CIPHER_DIRECTION_DECRYPT:
+        if (latency_debug) {
+            PRINT( "%s: latencyCipherDirection is now DECRYPT\n",
+                    __FUNCTION__ )
+        }
+        latencyCipherDirection = direction;
+        cipherDirection_g = latencyCipherDirection;
+        break;
+
+    default:
+        PRINT( "ERROR: %s: latencyCipherDirection( %d ) invalid argument\n",
+                __FUNCTION__, (int)direction );
+        break;
+    }
+}
+EXPORT_SYMBOL(setLatencyCipherDirection);
 
 char *cpaStatusToString( CpaStatus status )
 {
@@ -664,7 +725,6 @@ CpaStatus performCompress(compression_test_params_t* setup,
     /* set in completion service routine dcPerformCallback() */
     perf_cycles_t    request_respnse_time[MAX_LATENCY_COUNT] = {0};
 #endif
-
     /* Calculate the number of individual buffers to be submitted */
     for(i = 0; i < corpus_g.numFilesInCorpus; i++ )
     {
@@ -794,10 +854,10 @@ CpaStatus performCompress(compression_test_params_t* setup,
 					}
                 }
 #endif
-                status = cpaDcCompressData(setup->dcInstanceHandle,
-                       pSessionHandle, srcBuffListArray[i][j],
-                         dstBuffListArray[i][j], cmpResult[i][j],
-                            flushFlag, perfData);
+                        status = cpaDcCompressData(setup->dcInstanceHandle,
+                               pSessionHandle, srcBuffListArray[i][j],
+                                 dstBuffListArray[i][j], cmpResult[i][j],
+                                    flushFlag, (void *)perfData);
                 if(CPA_STATUS_RETRY == status )
                 {
                     setup->performanceStats->retries++;
@@ -945,7 +1005,6 @@ CpaStatus compressCorpus(compression_test_params_t* setup,
     /* flushFlag set to CPA_DC_FLUSH_FINAL for stateless requests */
     CpaDcFlush flushFlag = CPA_DC_FLUSH_FINAL;
     CpaDcCallbackFn dcCbFn = NULL;
-
     perfData = setup->performanceStats;
 
     /* Zero performance stats */
@@ -1011,10 +1070,10 @@ CpaStatus compressCorpus(compression_test_params_t* setup,
         for(j=0; j < setup->numberOfBuffers[i]; j++)
         {
             do {
-                status = cpaDcCompressData(setup->dcInstanceHandle,
-                           pSessionHandle, srcBuffListArray[i][j],
-                             dstBuffListArray[i][j], cmpResult[i][j],
-                                flushFlag, callbackTag[i][j]);
+                    status = cpaDcCompressData(setup->dcInstanceHandle,
+                               pSessionHandle, srcBuffListArray[i][j],
+                                 dstBuffListArray[i][j], cmpResult[i][j],
+                                    flushFlag, callbackTag[i][j]);
 
                 if(CPA_STATUS_RETRY == status)
                 {
@@ -1845,7 +1904,6 @@ void dcPerformance(single_thread_test_data_t* testSetup)
         qaeMemFree((void**)&dcSetup.numberOfBuffers);
         sampleCodeThreadExit();
     }
-
 
 
     /*launch function that does all the work*/

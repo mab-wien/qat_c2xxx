@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  ***************************************************************************/
 
@@ -137,6 +137,7 @@
 #define SAMPLE_CODE_CPA_DC_L9 (CPA_DC_L4)
 #endif
 
+
 /* the following are defined in the framework, these are used for setup only
  * and are not to be used in functions not thread safe
  */
@@ -161,11 +162,16 @@ typedef enum _corpusType
     CANTERBURY_CORPUS = 0,
     /* Calgary Corpus*/
     CALGARY_CORPUS,
-    SIGN_OF_LIFE_CORPUS,
+    SIGN_OF_LIFE_CORPUS
 #ifdef LATENCY_CODE
     /* All zeros corpus. Enables calibrating latencies among different buffer sizes */
     ,ZEROS_CORPUS
 #endif
+    ,CALGARY_SIX_FILES,
+    CALGARY_FULL_SET,
+    ZERO_LENGTH_FILE,
+    OVERFLOW_FILE,
+    OVERFLOW_AND_ZERO_FILE
 } corpus_type_t;
 
 
@@ -239,8 +245,8 @@ typedef enum _dpRequestType
 
 typedef struct compression_test_params_s
 {
-     /* Session Direction */
-     CpaDcSessionDir dcSessDir;
+    /* Session Direction */
+    CpaDcSessionDir dcSessDir;
     /*compression instance handle of service that has already been started*/
     CpaInstanceHandle dcInstanceHandle;
     /*pointer to pre-allocated memory for thread to store performance data*/
@@ -272,7 +278,9 @@ typedef struct compression_test_params_s
     Cpa32U outputListSize;
     Cpa32U *numberOfOutputLists;
     Cpa32U flatBuffSize;
-
+#ifdef SC_BNP_ENABLED
+    CpaBoolean isBnpSession;
+#endif
 } compression_test_params_t;
 
 /**
@@ -384,22 +392,22 @@ CpaStatus dcPerform( compression_test_params_t* setup);
  *  @param[in]  numloops Number of loops to compress or decompress
  ******************************************************************************/
 CpaStatus setupDcTest(CpaDcCompType algorithm,
-                   CpaDcSessionDir direction ,
-                   CpaDcCompLvl compLevel,
-                   CpaDcHuffType huffmanType,
-                   CpaDcFileType fileType,
-                   CpaDcSessionState state,
-                   Cpa32U windowSize,
-                   Cpa32U testBufferSize,
-                   corpus_type_t corpusType,
-                   synchronous_flag_t syncFlag,
-                   Cpa32U numLoops);
+        CpaDcSessionDir direction ,
+        CpaDcCompLvl compLevel,
+        CpaDcHuffType huffmanType,
+        CpaDcFileType fileType,
+        CpaDcSessionState state,
+        Cpa32U windowSize,
+        Cpa32U testBufferSize,
+        corpus_type_t corpusType,
+        synchronous_flag_t syncFlag,
+        Cpa32U numLoops);
 
 
 /**
  * *****************************************************************************
  *  @ingroup compressionThreads
- *  setupDcTest
+ *  setupDcStatefulTest
  *
  *  @description
  *      this API is the main API called by the framework, this is configures
@@ -501,7 +509,7 @@ CpaStatus getCompressedFile(Cpa8U** ppSrcBuff, char *filename, Cpa32U *size);
  *
  ******************************************************************************/
 void freeBuffers(CpaBufferList ***pBuffListArray,
-                 Cpa32U numberOfFiles, compression_test_params_t* setup);
+        Cpa32U numberOfFiles, compression_test_params_t* setup);
 
 /**
  * *****************************************************************************
@@ -519,8 +527,8 @@ void freeBuffers(CpaBufferList ***pBuffListArray,
  *
  ******************************************************************************/
 CpaStatus compareBuffers(CpaBufferList ***ppSrc,
-                           CpaBufferList ***ppDst,
-                           compression_test_params_t* setup);
+        CpaBufferList ***ppDst,
+        compression_test_params_t* setup);
 
 
 /**
@@ -577,7 +585,7 @@ void deCompressCallback(
  *
  ******************************************************************************/
 void freeResults(CpaDcRqResults ***ppDcResult, Cpa32U numFiles,
-                 compression_test_params_t* setup);
+        compression_test_params_t* setup);
 
 /**
  * *****************************************************************************
@@ -617,10 +625,10 @@ void freeCbTags(dc_callbacktag_t ***ppCallbackTag, Cpa32U numFiles,
  *
  ******************************************************************************/
 CpaStatus performCompress(compression_test_params_t* setup,
-                          CpaBufferList ***srcBuffListArray,
-                          CpaBufferList ***dstBuffListArray,
-                          CpaDcRqResults ***cmpResult,
-                          CpaDcCallbackFn dcCbFn);
+        CpaBufferList ***srcBuffListArray,
+        CpaBufferList ***dstBuffListArray,
+        CpaDcRqResults ***cmpResult,
+        CpaDcCallbackFn dcCbFn);
 /**
  * *****************************************************************************
  *  @ingroup compressionThreads
@@ -642,12 +650,12 @@ CpaStatus performCompress(compression_test_params_t* setup,
  *
  ******************************************************************************/
 CpaStatus performDeCompress(compression_test_params_t* setup,
-                          CpaBufferList ***srcBuffListArray,
-                          CpaBufferList ***dstBuffListArray,
-                          CpaBufferList ***cmpBuffListArray,
-                          CpaDcRqResults ***cmpResult,
-                          CpaDcRqResults ***dcmpResult,
-                          CpaDcCallbackFn dcCbFn);
+        CpaBufferList ***srcBuffListArray,
+        CpaBufferList ***dstBuffListArray,
+        CpaBufferList ***cmpBuffListArray,
+        CpaDcRqResults ***cmpResult,
+        CpaDcRqResults ***dcmpResult,
+        CpaDcCallbackFn dcCbFn);
 /**
  * *****************************************************************************
  *  @ingroup compressionThreads
@@ -669,10 +677,10 @@ CpaStatus performDeCompress(compression_test_params_t* setup,
  ******************************************************************************/
 
 CpaStatus compressCorpus(compression_test_params_t* setup,
-                          CpaBufferList ***srcBuffListArray,
-                          CpaBufferList ***dstBuffListArray,
-                          CpaDcRqResults ***cmpResult,
-                          dc_callbacktag_t ***callbacktag);
+        CpaBufferList ***srcBuffListArray,
+        CpaBufferList ***dstBuffListArray,
+        CpaDcRqResults ***cmpResult,
+        dc_callbacktag_t ***callbacktag);
 /**
  * *****************************************************************************
  *  @ingroup compressionThreads
@@ -694,7 +702,7 @@ CpaStatus compressCorpus(compression_test_params_t* setup,
  ******************************************************************************/
 
 CpaStatus dcSampleCreateContextBuffer(Cpa32U buffSize,
-                Cpa32U metaSize,CpaBufferList **pBuffListArray, Cpa32U nodeId);
+        Cpa32U metaSize,CpaBufferList **pBuffListArray, Cpa32U nodeId);
 
 /**
  * *****************************************************************************

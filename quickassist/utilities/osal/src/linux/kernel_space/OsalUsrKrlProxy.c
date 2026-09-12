@@ -7,7 +7,7 @@
  * @par
  * GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  *   Contact Information:
  *   Intel Corporation
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  */
 
 #include "Osal.h"
@@ -121,7 +121,7 @@ dev_mem_alloc_page(struct file *fp, unsigned int cmd, unsigned long arg)
     if (NULL == mem_info)
     {
         osalLog (OSAL_LOG_LVL_ERROR, OSAL_LOG_DEV_STDOUT,
-             "dev_mem_alloc_page(): alloc_pages_node failed\n",
+             "dev_mem_alloc_page(): userMemAllocPage failed\n",
              0, 0, 0, 0, 0, 0, 0, 0);
         return -ENOMEM;
     }
@@ -520,37 +520,12 @@ static chr_drv_info_t mem_drv_info_page = {
 };
 
 static int
-chr_drv_create_class(chr_drv_info_t* drv_info, char* path)
+chr_drv_create_class(chr_drv_info_t* drv_info)
 {
-    char name[DEV_PATH_SIZE] = "";
-    size_t path_len = 0;
-    size_t drv_info_name_len = 0;
-
     OSAL_LOCAL_ENSURE(drv_info,
               "chr_drv_create_class(): Invalid parameter value ",
               OSAL_FAIL);
-
-    if(path != NULL)
-    {
-        path_len = OSAL_OS_GET_STRING_LENGTH(path);
-        drv_info_name_len = OSAL_OS_GET_STRING_LENGTH(drv_info->name);
-
-        if (path_len >
-        (DEV_PATH_SIZE - drv_info_name_len - strlen("/")))
-        {
-        osalLog (OSAL_LOG_LVL_ERROR, OSAL_LOG_DEV_STDOUT,
-        "path to device is greater that max length\n",
-        0, 0, 0, 0, 0, 0, 0, 0);
-        return OSAL_FAIL;
-        }
-
-        strncpy(name, path, path_len);
-        strncat(name, "/", 1);
-        strncat(name, drv_info->name, drv_info_name_len);
-    }
-
-    drv_info->drv_class = class_create(THIS_MODULE,
-                       (path) ? name : drv_info->name);
+    drv_info->drv_class = class_create(THIS_MODULE, drv_info->name);
     if (IS_ERR(drv_info->drv_class)) {
         osalLog (OSAL_LOG_LVL_ERROR, OSAL_LOG_DEV_STDOUT,
         "class_create failed\n", 0, 0, 0, 0, 0, 0, 0, 0);
@@ -586,39 +561,18 @@ chr_drv_destroy_device(chr_drv_info_t *drv_info)
 }
 
 static int
-chr_drv_create_device(chr_drv_info_t *drv_info, char *path)
+chr_drv_create_device(chr_drv_info_t *drv_info)
 {
     int ret = 0;
     dev_t devid = 0;
-    char name[DEV_PATH_SIZE] = "";
-    size_t path_len = 0;
-    size_t drv_info_name_len = 0;
 
     OSAL_LOCAL_ENSURE(drv_info,
               "chr_drv_destroy(): Invalid parameter value ",
               OSAL_FAIL);
-
-    if (path != NULL)
-    {
-        path_len = OSAL_OS_GET_STRING_LENGTH(path);
-        drv_info_name_len = OSAL_OS_GET_STRING_LENGTH(drv_info->name);
-        if (path_len > (DEV_PATH_SIZE - drv_info_name_len - 1))
-        {
-        osalLog (OSAL_LOG_LVL_ERROR, OSAL_LOG_DEV_STDOUT,
-        "path to device is greater that max length\n",
-        0, 0, 0, 0, 0, 0, 0, 0);
-        return OSAL_FAIL;
-        }
-
-        strncpy(name, path, path_len);
-        strncat(name, "/", 1);
-        strncat(name, drv_info->name, drv_info_name_len);
-    }
-
     ret = alloc_chrdev_region(&devid,
                   drv_info->min_minor,
                   drv_info->max_minor,
-                  (path) ? name: drv_info->name);
+                  drv_info->name);
 
     if (ret < 0) {
         osalLog (OSAL_LOG_LVL_ERROR, OSAL_LOG_DEV_STDOUT,
@@ -642,11 +596,11 @@ chr_drv_create_device(chr_drv_info_t *drv_info, char *path)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))
     drv_info->drv_class_dev = device_create(drv_info->drv_class,
               NULL, MKDEV(drv_info->major, DEV_MEM_BASE_MINOR),
-              NULL, (path)?name:drv_info->name);
+              NULL, drv_info->name);
 #else
        drv_info->drv_class_dev = device_create(drv_info->drv_class,
               NULL, MKDEV(drv_info->major, DEV_MEM_BASE_MINOR),
-              (path)?name:drv_info->name);
+              drv_info->name);
 #endif
 
     if(NULL == drv_info->drv_class_dev)
@@ -660,7 +614,7 @@ chr_drv_create_device(chr_drv_info_t *drv_info, char *path)
     return OSAL_SUCCESS;
 }
 
-int register_mem_device_driver(char* path)
+int register_mem_device_driver(void)
 {
     int ret = 0;
     mem_dev_numa = kzalloc(sizeof(user_mem_dev_t), GFP_KERNEL);
@@ -681,7 +635,7 @@ int register_mem_device_driver(char* path)
         return OSAL_FAIL;
     }
 
-    ret = chr_drv_create_class(&mem_drv_info, path);
+    ret = chr_drv_create_class(&mem_drv_info);
     if (OSAL_SUCCESS != ret) {
         osalLog (OSAL_LOG_LVL_ERROR, OSAL_LOG_DEV_STDOUT,
         "failed to create device driver class\n",
@@ -690,7 +644,7 @@ int register_mem_device_driver(char* path)
         kfree(mem_dev_page);
         return OSAL_FAIL;
     }
-    ret = chr_drv_create_device(&mem_drv_info, path);
+    ret = chr_drv_create_device(&mem_drv_info);
     if (OSAL_SUCCESS != ret) {
         osalLog (OSAL_LOG_LVL_ERROR, OSAL_LOG_DEV_STDOUT,
         "failed to create mem numa device driver\n",
@@ -701,7 +655,7 @@ int register_mem_device_driver(char* path)
         return OSAL_FAIL;
     }
     mem_drv_info_page.drv_class = mem_drv_info.drv_class;
-    ret = chr_drv_create_device(&mem_drv_info_page, path);
+    ret = chr_drv_create_device(&mem_drv_info_page);
     if (OSAL_SUCCESS != ret) {
         osalLog (OSAL_LOG_LVL_ERROR, OSAL_LOG_DEV_STDOUT,
         "failed to create mem numa device driver\n",

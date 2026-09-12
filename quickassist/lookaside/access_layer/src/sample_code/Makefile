@@ -4,7 +4,7 @@
 # 
 #   GPL LICENSE SUMMARY
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 # 
 #   This program is free software; you can redistribute it and/or modify 
 #   it under the terms of version 2 of the GNU General Public License as
@@ -26,7 +26,7 @@
 # 
 #   BSD LICENSE 
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 #   All rights reserved.
 # 
 #   Redistribution and use in source and binary forms, with or without 
@@ -56,7 +56,7 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # 
 # 
-#  version: QAT1.5.L.1.11.0-36
+#  version: QAT1.5.L.1.13.0-19
 ################################################################
 
 # Ensure The ICP_ENV_DIR environmental var is defined.
@@ -71,6 +71,19 @@ ICP_OS?=linux
 ICP_OS_LEVEL?=kernel_space
 ICP_BUILD_OUTPUT?=$(ICP_ROOT)/build
 INCLUDE_COMPRESSION=1
+
+# Define CMN_ROOT for Release  
+#ifdef WITH_CMDRV
+ifeq ($(WITH_CMDRV),1)
+    ifeq ($(WITH_ICP_TARGET),1)
+        CMN_ROOT?=$(ICP_ROOT)/quickassist/utilities/libqae_mem/
+        CMN_MODULE_NAME?=libqae_mem
+    else
+        CMN_ROOT?=$(ICP_ROOT)/quickassist/utilities/libusdm_drv/
+        CMN_MODULE_NAME?=libusdm_drv
+    endif
+endif
+#endif
 
 CMN_ROOT?=$(ICP_ROOT)/quickassist/lookaside/access_layer/src/sample_code/performance/qae/
 CMN_MODULE_NAME?=qaeMemDrv
@@ -132,6 +145,24 @@ endif
 ifeq ($(USE_ZLIB),1)
 	EXTRA_CFLAGS += -DUSE_ZLIB
 endif
+ifeq ($(SC_WITH_QAT17),1)
+    EXTRA_CFLAGS += -DSC_WITH_QAT17
+endif
+ifeq ($(SC_WITH_QAT18),1)
+    EXTRA_CFLAGS += -DSC_WITH_QAT18
+endif
+#ifdef WITH_CMDRV
+ifeq ($(WITH_CMDRV),1)
+MEM_DRIVER=common_mem_drv_kernel common_mem_drv_user
+CODING_STD_MEM_DRIVER=" "
+CLEAN_MEM_DRIVER=clean_common_mem_drv
+endif
+#endif
+
+ifeq ($(SC_BNP_ENABLED),1)
+        EXTRA_CFLAGS += -DSC_BNP_ENABLED
+endif
+
 
 MEM_DRIVER=perf_qae
 CODING_STD_MEM_DRIVER=perf_qae_coding_standards
@@ -154,13 +185,13 @@ perf_all: $(PERF_ALL)
 perf_user: output_dir
 	@echo ; echo "Building perf_user";
 	@cd $(PERF_PATH) && $(MAKE) clean ICP_OS_LEVEL=user_space && $(MAKE) ARCH=$(ICP_ARCH_USER) ICP_OS_LEVEL=user_space lib_shared exe
-	@cp $(PERF_PATH)/build/linux_2.6/user_space/$(PERF_OUTPUT_NAME)_s.so $(SAMPLE_BUILD_OUTPUT)/;
-	@cp $(PERF_PATH)/build/linux_2.6/user_space/$(PERF_OUTPUT_NAME) $(SAMPLE_BUILD_OUTPUT)/;
+	@cp $(PERF_PATH)/build/$(ICP_OS)/user_space/$(PERF_OUTPUT_NAME)_s.so $(SAMPLE_BUILD_OUTPUT)/;
+	@cp $(PERF_PATH)/build/$(ICP_OS)/user_space/$(PERF_OUTPUT_NAME) $(SAMPLE_BUILD_OUTPUT)/;
 
 perf_kernel: output_dir
 	@echo ; echo "Building perf_kernel";
 	@cd $(PERF_PATH) && $(MAKE)  ICP_OS_LEVEL=kernel_space 
-	@cp $(PERF_PATH)/build/linux_2.6/$(ICP_OS_LEVEL)/$(PERF_OUTPUT_NAME).ko $(SAMPLE_BUILD_OUTPUT)/;
+	@cp $(PERF_PATH)/build/$(ICP_OS)/$(ICP_OS_LEVEL)/$(PERF_OUTPUT_NAME).ko $(SAMPLE_BUILD_OUTPUT)/;
 	
 common_mem_drv_kernel: output_dir
 	@echo ; echo "Building common_mem_drv kernel space";
@@ -174,8 +205,8 @@ common_mem_drv_user: output_dir
 
 perf_qae: output_dir
 	@echo ; echo "Building perf_qae";
-	@cd $(CMN_ROOT)/linux/kernel_space && $(MAKE)  ICP_OS_LEVEL=kernel_space 
-	@cp $(CMN_ROOT)/linux/kernel_space/build/linux_2.6/$(ICP_OS_LEVEL)/$(CMN_MODULE_NAME).ko $(SAMPLE_BUILD_OUTPUT)/;
+	@cd $(CMN_ROOT)/$(OS)/kernel_space && $(MAKE)  ICP_OS_LEVEL=kernel_space 
+	@cp $(CMN_ROOT)/$(OS)/kernel_space/build/$(ICP_OS)/$(ICP_OS_LEVEL)/$(CMN_MODULE_NAME).ko $(SAMPLE_BUILD_OUTPUT)/;
 
 
 func: output_dir
@@ -183,6 +214,8 @@ func: output_dir
 
 
 all: $(MEM_DRIVER) fips_code perf_user perf_kernel func
+perf_klocwork_ci: perf_kernel
+
 perf: $(MEM_DRIVER) perf_kernel
 RM=rm -f
 CODE_CLEAN = curr_dir_clean sub_dir_clean
@@ -198,9 +231,14 @@ curr_dir_clean: $(CURR_DIR_CLEAN)
 sub_dir_clean:$(SUB_DIR_CLEAN)
 	@echo; echo "Sub-directory level cleaning done.";
 
+ifeq ($(WITH_CMDRV),1)
+clean_performance_code: clean_perf_user clean_perf_kernel
+	@echo; echo "Cleaning at clean_performance_code done."
+else
 clean_performance_code: $(CLEAN_MEM_DRIVER) clean_perf_user clean_perf_kernel
 	@echo; echo "Cleaning at clean_performance_code done."
 
+endif
 	
 clean_fips_path:
 	@echo; echo "$(FIPS_PATH) Cleaning.";
@@ -212,20 +250,28 @@ clean_perf_path:
 clean_func_path:
 	@echo; echo "$(FUNC_PATH) Cleaning. "
 	@cd $(FUNC_PATH) && $(MAKE) clean;
-
+#ifdef WITH_CMDRV
+clean_common_mem_drv:
+	@echo; echo "Common Memory Drive Cleaning $(WITH_CMDRV).";
+	$(RM) $(CMN_ROOT)/$(CMN_MODULE_NAME).a ;
+	$(RM) $(ICP_BUILD_OUTPUT)/$(CMN_MODULE_NAME).a ;
+	$(RM) $(CMN_ROOT)/$(CMN_MODULE_NAME).ko ;
+	$(RM) $(ICP_BUILD_OUTPUT)/*_mem.ko;
+	@cd $(CMN_ROOT) && $(MAKE) clean;
+#endif
 clean_perf_qae:
 	@echo; echo "Qae Mem Driver Cleaning.";
-	$(RM) $(CMN_ROOT)/linux/kernel_space/build/linux_2.6/$(ICP_OS_LEVEL)/$(CMN_MODULE_NAME).ko ;
+	$(RM) $(CMN_ROOT)/$(OS)/kernel_space/build/$(ICP_OS)/$(ICP_OS_LEVEL)/$(CMN_MODULE_NAME).ko ;
 	$(RM) $(SAMPLE_BUILD_OUTPUT)/$(CMN_MODULE_NAME).ko;
-	@cd $(CMN_ROOT)/linux/kernel_space && $(MAKE) clean;
+	@cd $(CMN_ROOT)/$(OS)/kernel_space && $(MAKE) clean;
 
 clean_perf_kernel:
-	$(RM) $(PERF_PATH)/build/linux_2.6/$(ICP_OS_LEVEL)/$(PERF_OUTPUT_NAME).ko ;
+	$(RM) $(PERF_PATH)/build/$(ICP_OS)/$(ICP_OS_LEVEL)/$(PERF_OUTPUT_NAME).ko ;
 	$(RM) $(SAMPLE_BUILD_OUTPUT)/$(PERF_OUTPUT_NAME).ko ;
  
 clean_perf_user:
-	$(RM) $(PERF_PATH)/build/linux_2.6/user_space/$(PERF_OUTPUT_NAME)_s.so ;
+	$(RM) $(PERF_PATH)/build/$(ICP_OS)/user_space/$(PERF_OUTPUT_NAME)_s.so ;
 	$(RM) $(SAMPLE_BUILD_OUTPUT)/$(PERF_OUTPUT_NAME)_s.so;
-	$(RM) $(PERF_PATH)/build/linux_2.6/user_space/$(PERF_OUTPUT_NAME) ;
+	$(RM) $(PERF_PATH)/build/$(ICP_OS)/user_space/$(PERF_OUTPUT_NAME) ;
 	$(RM) $(SAMPLE_BUILD_OUTPUT)/$(PERF_OUTPUT_NAME) ;
 
