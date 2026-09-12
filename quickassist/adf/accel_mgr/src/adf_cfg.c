@@ -314,7 +314,7 @@ void adf_cfgSectionDel(adf_cfg_section_t **pSectionList)
  * adf_cfgKeyValueList
  * List all key-value parameters from the key-value table
  */
-void adf_cfgKeyValueList(adf_cfg_key_val_t *pKeyValueList)
+static void adf_cfgKeyValueList(adf_cfg_key_val_t *pKeyValueList)
 {
     while (pKeyValueList != NULL)
     {
@@ -328,7 +328,7 @@ void adf_cfgKeyValueList(adf_cfg_key_val_t *pKeyValueList)
  * adf_cfgSectionList
  * List all sections and associated key-value pairs
  */
-void adf_cfgSectionList(adf_cfg_section_t *pSectionList)
+static void __attribute__((unused)) adf_cfgSectionList(adf_cfg_section_t *pSectionList)
 {
     adf_cfg_key_val_t *pKeyValueList;
 
