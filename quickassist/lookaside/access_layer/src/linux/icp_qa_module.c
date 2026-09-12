@@ -78,7 +78,6 @@
 #include <linux/crypto.h>
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28))
 #include <crypto/hash.h>
-#include <crypto/sha.h>
 #endif   /* End of check for KERNEL_VERSION(2,6,28) */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,34))
 #include <crypto/md5.h>
