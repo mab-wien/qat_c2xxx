@@ -144,6 +144,7 @@ typedef unsigned char   uchar;
 
 int halAe_getPciCsr(icp_firml_handle_t *handle, unsigned int offset, unsigned int numBytes, unsigned int *data);
 int halAe_putPciCsr(icp_firml_handle_t *handle, unsigned int offset, unsigned int numBytes, unsigned int data);
+int halAe_DisableClkGating(icp_firml_handle_t *handle);
 #define GET_PCI_CSR halAe_getPciCsr
 #define PUT_PCI_CSR halAe_putPciCsr
 

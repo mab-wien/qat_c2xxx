@@ -160,6 +160,21 @@ typedef struct batch_init_s{
 extern "C" {
 #endif
 
+/* internal helpers shared between halAe.c and halAeHw.c, not part of
+ * the public HAL API documented below */
+int halAe_clearGPRs_Common(icp_firml_handle_t *handle, unsigned int aeMask);
+int halAe_BatchPutLM_Common(icp_firml_handle_t *handle, unsigned char ae,
+            batch_init_t *lm_init_header);
+int halAe_ContinuousDramAlloc(icp_firml_handle_t *Handle,
+                          icp_firml_dram_desc_t *pDram_desc,
+                          unsigned int size);
+void halAe_ContinuousDramFree(icp_firml_handle_t *Handle,
+                         icp_firml_dram_desc_t *pDram_desc);
+void halAe_WaitShramReady(icp_firml_handle_t *handle,
+                               unsigned int aeMask);
+int halAe_clearGPRs(icp_firml_handle_t *handle, 
+                unsigned int aeMask);
+
 /**
  *****************************************************************************
  * @ingroup icp_hal
