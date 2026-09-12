@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  ***************************************************************************/
 
@@ -229,13 +229,13 @@ static CpaStatus createBuffersDp(Cpa32U buffSize, Cpa32U numBuffs,
          * We convert it to a physical address after we use it as a virtual
          * address
          */
-        pFlatBuffArray[i]->bufferPhysAddr =(CpaPhysicalAddr)(SAMPLE_CODE_UINT)
+        pFlatBuffArray[i]->bufferPhysAddr =(CpaPhysicalAddr)(uintptr_t)
           qaeMemAllocNUMA(buffSize, nodeId, BYTE_ALIGNMENT_64);
 
-        memset((SAMPLE_CODE_UINT  *)(SAMPLE_CODE_UINT)
+        memset((SAMPLE_CODE_UINT  *)(uintptr_t)
                 pFlatBuffArray[i]->bufferPhysAddr,0, buffSize);
 
-        if(NULL == (void *)(SAMPLE_CODE_UINT)pFlatBuffArray[i]->bufferPhysAddr)
+        if(NULL == (void *)(uintptr_t)pFlatBuffArray[i]->bufferPhysAddr)
         {
             PRINT_ERR(" Unable to allocate flat buffer phys addr\n");
             return CPA_STATUS_FAIL;
@@ -296,7 +296,7 @@ static void freeBuffersDp(CpaPhysFlatBuffer ***pFlatBuffArray,
        {
            if (NULL != pFlatBuffArray[i][j])
            {
-               if(NULL != (void *)(SAMPLE_CODE_UINT)
+               if(NULL != (void *)(uintptr_t)
                        pFlatBuffArray[i][j]->bufferPhysAddr)
                {
                    qaeMemFreeNUMA((void**)&pFlatBuffArray[i][j]->
@@ -657,8 +657,8 @@ static CpaStatus performDcDpEnqueueOp(compression_test_params_t* setup,
                              * routine. So we grab it's start time now.
                              */
                             if (latency_debug) PRINT("%s: status=%s submissions=%u, nextCount=%u, latencyCount=%d\n",
-                                    cpaStatusToString( status ),
                                     __FUNCTION__,
+                                    cpaStatusToString( status ),
                                     submissions,
                                     perfData->nextCount,
                                     i );
@@ -1188,7 +1188,7 @@ static CpaStatus dcDpPerform( compression_test_params_t* setup )
         /* Copy the data into Flat buffers */
         for(j=0; j< amountOfFullBuffers; j++)
         {
-            memcpy(((void *)(SAMPLE_CODE_UINT)
+            memcpy(((void *)(uintptr_t)
                     srcFlatBuffArray[i][j]->bufferPhysAddr),
                                        fileDataPtr, bufferSize);
             fileDataPtr += bufferSize;
@@ -1276,12 +1276,12 @@ static CpaStatus dcDpPerform( compression_test_params_t* setup )
             compressionOpData[i][j]->pSessionHandle = pSessionHandle;
 
             compressionOpData[i][j]->srcBuffer =
-                     (CpaPhysicalAddr)(SAMPLE_CODE_UINT)qaeVirtToPhysNUMA(
-              (void *)(SAMPLE_CODE_UINT)srcFlatBuffArray[i][j]->bufferPhysAddr);
+                     (CpaPhysicalAddr)qaeVirtToPhysNUMA(
+              (void *)(uintptr_t)srcFlatBuffArray[i][j]->bufferPhysAddr);
 
             compressionOpData[i][j]->destBuffer =
-                    (CpaPhysicalAddr)(SAMPLE_CODE_UINT)qaeVirtToPhysNUMA(
-              (void *)(SAMPLE_CODE_UINT)dstFlatBuffArray[i][j]->bufferPhysAddr);
+                    (CpaPhysicalAddr)qaeVirtToPhysNUMA(
+              (void *)(uintptr_t)dstFlatBuffArray[i][j]->bufferPhysAddr);
 
             compressionOpData[i][j]->srcBufferLen =
                                 srcFlatBuffArray[i][j]->dataLenInBytes;
@@ -1349,12 +1349,12 @@ static CpaStatus dcDpPerform( compression_test_params_t* setup )
                 decompressionOpData[i][j]->pSessionHandle = pSessionHandle;
 
                 decompressionOpData[i][j]->srcBuffer = (CpaPhysicalAddr)
-                    (SAMPLE_CODE_UINT)qaeVirtToPhysNUMA((void *)
-                    (SAMPLE_CODE_UINT)dstFlatBuffArray[i][j]->bufferPhysAddr);
+                    qaeVirtToPhysNUMA((void *)
+                    (uintptr_t)dstFlatBuffArray[i][j]->bufferPhysAddr);
 
                 decompressionOpData[i][j]->destBuffer = (CpaPhysicalAddr)
-                    (SAMPLE_CODE_UINT)qaeVirtToPhysNUMA( (void *)
-                     (SAMPLE_CODE_UINT)cmpFlatBuffArray[i][j]->bufferPhysAddr);
+                    qaeVirtToPhysNUMA( (void *)
+                     (uintptr_t)cmpFlatBuffArray[i][j]->bufferPhysAddr);
 
                 decompressionOpData[i][j]->srcBufferLen =
                             dstFlatBuffArray[i][j]->dataLenInBytes;

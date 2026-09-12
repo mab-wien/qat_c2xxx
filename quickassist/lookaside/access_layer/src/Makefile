@@ -7,7 +7,7 @@
 # 
 #   GPL LICENSE SUMMARY
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 # 
 #   This program is free software; you can redistribute it and/or modify 
 #   it under the terms of version 2 of the GNU General Public License as
@@ -29,7 +29,7 @@
 # 
 #   BSD LICENSE 
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 #   All rights reserved.
 # 
 #   Redistribution and use in source and binary forms, with or without 
@@ -59,7 +59,7 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # 
 # 
-#  version: QAT1.5.L.1.11.0-36
+#  version: QAT1.5.L.1.13.0-19
 ###############################################################################
 
 # Ensure The ICP_ENV_DIR environmental var is defined.
@@ -87,11 +87,7 @@ OSAL_PATH=$(ICP_ROOT)/quickassist/utilities/osal/
 
 #############Define the output section###############
 
-ifdef WITH_CPA_MUX
-BASENAME=qat_1_5_mux
-else
 BASENAME=icp_qa_al
-endif
 
 ifdef ONE_KO_RELEASE_PACKAGE
 	ifeq ($(ADF_PLATFORM), ACCELDEVVF)
@@ -146,10 +142,6 @@ ifeq ($(ICP_OS_LEVEL), kernel_space)
 ifneq ($(ADF_PLATFORM), ACCELDEVVF)
 ADDITIONAL_KERNEL_LIBS+= common/qat_ctrl/$(ICP_BUILD_OUTPUT_DIR)/qat_ctrl.a
 endif
-endif
-
-ifdef WITH_CPA_MUX
-EXTRA_CFLAGS += -DWITH_CPA_MUX
 endif
 
 ifdef ONE_KO_RELEASE_PACKAGE
@@ -224,13 +216,8 @@ lib_shared: lib
 	done ;\
 	cd $(ICP_FINAL_OUTPUT_DIR);\
 	echo $(LINKER) $(LIB_SHARED_FLAGS) -o $(LIB_SHARED) -lc $(OBJECTS) $(ADDITIONAL_OBJECTS) *.o -ldl -lpthread -lcrypto ; \
-	if [ "$$WITH_CPA_MUX" ]; then \
-			cmd="$(LINKER) -Bsymbolic $(LIB_SHARED_FLAGS) -o $(LIB_SHARED) -lc $(ADDITIONAL_OBJECTS) *.o -ldl -lpthread -lcrypto  \
-					-Bstatic -L$(ADF_DIR)/build/linux_2.6/ -ladf_proxy -L$(OSAL_DIR)/src/build/$(ICP_OS)/$(ICP_OS_LEVEL)/ -losal -Bdynamic"; \
-	else \
 			cmd="$(LINKER) $(LIB_SHARED_FLAGS) -o $(LIB_SHARED) -lc $(ADDITIONAL_OBJECTS) *.o -ldl -lpthread -lcrypto \
 					-Bstatic -L$(ADF_DIR)/build/linux_2.6/ -ladf_proxy -L$(OSAL_DIR)/src/build/$(ICP_OS)/$(ICP_OS_LEVEL)/ -losal -Bdynamic"; \
-	fi; \
 	echo "$$cmd"; \
 	$$cmd
 endif

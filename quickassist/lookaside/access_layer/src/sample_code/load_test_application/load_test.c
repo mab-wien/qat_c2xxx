@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  *****************************************************************************/
 
@@ -90,7 +90,9 @@
 #include "cpa_sample_code_dc_perf.h"
 #include "cpa_sample_code_dc_utils.h"
 #include "cpa_sample_code_framework.h"
+#ifndef WITH_UPSTREAM
 #include "cpa_sample_code_nrbg_perf.h"
+#endif
 
 #include "qae_mem.h"
 
@@ -496,6 +498,7 @@ static CpaStatus setupPkeTest(load_test_inst_info_t instanceInfo)
     return status;
 }
 
+#ifndef WITH_UPSTREAM
 static CpaStatus setupTrngTest(load_test_inst_info_t instanceInfo)
 {
     CpaStatus status = CPA_STATUS_FAIL;
@@ -524,6 +527,7 @@ static CpaStatus setupTrngTest(load_test_inst_info_t instanceInfo)
     }
     return status;
 }
+#endif
 
 /******************************************************************************
  *
@@ -722,6 +726,7 @@ static CpaStatus setupCryptoThreads(Cpa16U * const numInstancesFound)
             return CPA_STATUS_FAIL;
         }
     }
+#ifndef WITH_UPSTREAM
     for(i = 0; i < numTrng; i++)
     {
         if(!(strncmp((const char *)
@@ -741,6 +746,7 @@ static CpaStatus setupCryptoThreads(Cpa16U * const numInstancesFound)
             }
         }
     }
+#endif
     for(i = 0; i < numAlgchain; i++)
     {
         status = setupAlgorithmChainTest(pCyInstanceInfo[i%numCyInstances]);

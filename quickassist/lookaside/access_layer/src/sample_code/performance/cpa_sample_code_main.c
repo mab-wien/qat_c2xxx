@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  **************************************************************************/
 
@@ -84,6 +84,9 @@
 #endif
 #include "cpa_sample_code_sym_perf_dp.h"
 #include "icp_sal_versions.h"
+#ifdef SC_BNP_ENABLED
+#include "cpa_sample_code_dc_bnp.h"
+#endif
 
 #ifndef INCLUDE_COMPRESSION
 /*define this just so that sample code will build without compression code*/
@@ -100,7 +103,6 @@ corpus_type_t sampleCorpus;
 
 #ifdef USER_SPACE
 #include "icp_sal_user.h"
-
 
 extern CpaStatus qaeMemInit(void);
 extern void qaeMemDestroy(void);
@@ -128,8 +130,6 @@ option_t optArray[MAX_NUMOPT] ={
         {"configFileVer",USE_V2_CONFIG_FILE},
         {"runStateful",0},
         {"verboseOutput",1}};
-
-
 #define SIGN_OF_LIFE_OPT_ARRAY_POS      (0)
 #define RUN_TEST_OPT_ARRAY_POS          (1)
 #define NUM_BUFFERS_OPT_ARRAY_POS       (2)
@@ -151,6 +151,7 @@ extern int wirelessFirmware;
 extern int signOfLife;
 extern int runStateful;
 extern int verboseOutput;
+
 #endif
 
 
@@ -579,6 +580,7 @@ EXPORT_SYMBOL(printDriverVersion);
 #define ECDSA_CODE              (8)
 #define DH_CODE                 (16)
 #define COMPRESSION_CODE        (32)
+#define COMPRESSION_BNP_CODE    (64)
 #define FIRST_INSTANCE          (1)
 
 /***************************************************************************
@@ -720,6 +722,8 @@ int main(int argc,char *argv[])
         numPacketSizes = WIRELESS_PACKET_LIMIT;
     }
 #endif
+
+#else 
 
 #endif //USER_SPACE
 
@@ -873,10 +877,12 @@ int main(int argc,char *argv[])
            {
                PRINT("*** QA version information ***\n");
                PRINT("device ID\t\t= %d\n", qaVersionInfo.devId);
+#ifndef WITH_UPSTREAM
                PRINT("firmware \t\t= %s\n", qaVersionInfo.firmwareVersion);
                PRINT("mmp      \t\t= %s\n", qaVersionInfo.mmpVersion);
-               PRINT("software \t\t= %s\n", qaVersionInfo.softwareVersion);
                PRINT("hardware \t\t= %s\n", qaVersionInfo.hardwareVersion);
+#endif
+	       PRINT("software \t\t= %s\n", qaVersionInfo.softwareVersion);
                PRINT("*** END QA version information ***\n");
            }
 
@@ -1331,6 +1337,7 @@ int main(int argc,char *argv[])
 #endif /*DO_CRYPTO*/
 
 #ifdef DO_CRYPTO
+
     /***************************************************************************
      * DSA CRYPTO TESTS
      **************************************************************************/
@@ -1391,18 +1398,67 @@ int main(int argc,char *argv[])
             dcBufferSize = BUFFER_SIZE_65536;
         }
     /***************************************************************************
+     *  START OF COMPRESSION TESTS CALGARY CORPUS
+     **************************************************************************/
+        if(((COMPRESSION_CODE & runTests)== COMPRESSION_CODE) ||
+            ((COMPRESSION_BNP_CODE & runTests)== COMPRESSION_BNP_CODE)) 
+        {
+             status = cpaDcGetNumInstances(&numDcInst);
+            /* Check the status */
+            if(CPA_STATUS_SUCCESS != status)
+            {
+                  PRINT_ERR("Unable to Get Number of DC instances\n");
+                  return CPA_STATUS_FAIL;
+            }
+
+        }
+     /***************************************************************************
+     *  BATCH & PACK  COMPRESSION TESTS CALGARY CORPUS
+     **************************************************************************/
+        if((COMPRESSION_BNP_CODE & runTests)== COMPRESSION_BNP_CODE)
+        {
+
+            if(numDcInst>0)
+            {
+#ifdef SC_BNP_ENABLED
+                /* Batch and Pack Compression tests */
+                status = setupDcBnPStatefulPerf(CPA_DC_L3,
+                                 CPA_DC_HT_STATIC,
+                                 BUFFER_SIZE_8192,
+                                 BUFFER_SIZE_65536,
+                                 sampleCorpus,
+                                 dcLoops, 
+                                 1, /*number of jobs in batch */
+                                 CPA_FALSE, /* trigger zero length job*/
+                                 CPA_DC_SKIP_DISABLED, /* input skip mode */
+                                 CPA_DC_SKIP_DISABLED, /* output skip mode */
+                                 0, /* input skip length */
+                                 0, /* output skip length */
+                                 CPA_FALSE, /* trigger overflow */
+                                 0,
+                                 CPA_DC_STATEFUL
+                                 );
+                if(CPA_STATUS_SUCCESS != status)
+                {
+                    PRINT_ERR("Error calling setupDcBnPStatefulPerf\n");
+                    return CPA_STATUS_FAIL;
+                }
+                status = createStartandWaitForCompletion(COMPRESSION);
+                if(status == CPA_STATUS_FAIL)
+                {
+                    retStatus = CPA_STATUS_FAIL;
+                }
+#endif
+            }
+        }
+
+     /**************************************************************************
      * COMPRESSION TESTS CALGARY CORPUS
      **************************************************************************/
+
         if((COMPRESSION_CODE & runTests)== COMPRESSION_CODE)
         {
 
-		status = cpaDcGetNumInstances(&numDcInst);
-		/* Check the status */
-		if(CPA_STATUS_SUCCESS != status)
-		{
-			PRINT_ERR("Unable to Get Number of DC instances\n");
-			return CPA_STATUS_FAIL;
-		}
 		if(numDcInst>0)
 		{
 
@@ -1430,7 +1486,6 @@ int main(int argc,char *argv[])
                 {
                     retStatus = CPA_STATUS_FAIL;
                 }
-
                 status = setupDcTest( CPA_DC_DEFLATE,
                             CPA_DC_DIR_DECOMPRESS,
                             SAMPLE_CODE_CPA_DC_L1,
@@ -1474,7 +1529,6 @@ int main(int argc,char *argv[])
                 {
                     retStatus = CPA_STATUS_FAIL;
                 }
-
                 status = setupDcTest( CPA_DC_DEFLATE,
                             CPA_DC_DIR_DECOMPRESS,
                             SAMPLE_CODE_CPA_DC_L3,
@@ -1564,7 +1618,6 @@ int main(int argc,char *argv[])
                     {
                         retStatus = CPA_STATUS_FAIL;
                     }
-
                     status = setupDcTest( CPA_DC_DEFLATE,
                             CPA_DC_DIR_DECOMPRESS,
                             SAMPLE_CODE_CPA_DC_L3,
@@ -1860,6 +1913,7 @@ int main(int argc,char *argv[])
         PRINT_ERR("Could not stop sal for user space\n");
         return CPA_STATUS_FAIL;
     }
+
     qaeMemDestroy();
 #endif /* USER_SPACE */
     return retStatus;

@@ -6,7 +6,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -28,7 +28,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -58,7 +58,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  ***************************************************************************/
 
@@ -267,7 +267,7 @@ QatCtrl_AdminMsgSendSync(CpaInstanceHandle instanceHandle,
     else
     {
         /* if QatCtrl_BuildAndSendAdminMsg fails, then memory should be free*/
-        LAC_OS_FREE(pCbInfo);
+        LAC_OS_CAFREE(pCbInfo);
 
         /* As the Request was not sent the Callback will never
          * be called, so need to indicate that we're finished

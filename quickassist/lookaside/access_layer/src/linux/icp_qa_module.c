@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  *****************************************************************************/
 
@@ -106,12 +106,6 @@
 #include "cpa_dc_dp.h"
 #include "cpa_cy_prime.h"
 
-#ifdef WITH_CPA_MUX
-#include "cpa_impl_mux.h"
-static void *cpa_mux_handle;
-extern CpaFuncPtrs cpaMuxFuncPtrs;
-#endif
-
 #define SUCCESS 0
 #define FAIL 1
 
@@ -119,7 +113,7 @@ MODULE_DESCRIPTION("ICP Look Aside Acceleration driver");
 MODULE_AUTHOR("Intel Corporation");
 MODULE_LICENSE("Dual BSD/GPL");
 
-extern int  __init osal_init(char* path);
+extern int  __init osal_init(void);
 extern void osal_exit(void);
 extern int __init adf_init(void);
 extern void adf_exit(void);
@@ -150,7 +144,7 @@ static int __init QaModInit(void)
         goto failed;
     }
 
-    if(SUCCESS != osal_init(NULL))
+    if(SUCCESS != osal_init())
     {
         printk("Error initialising osal\n");
         goto failed;
@@ -163,17 +157,6 @@ static int __init QaModInit(void)
         goto failed;
     }
 
-#ifdef WITH_CPA_MUX
-    if (SUCCESS != cpaMuxRegisterImpl(CPA_MUX_DRIVER_TYPE_QAT_1_5,
-                                      NULL, &cpaMuxFuncPtrs,
-                                      &cpa_mux_handle))
-    {
-        printk("Error registering with CpaMux\n");
-        adf_exit(); 
-        osal_exit();
-        goto failed;
-    }
-#endif
 
     icpSetProcessName(LAC_KERNEL_PROCESS_NAME);
     /* MUST register QAT first as qat instances need to be started before
@@ -186,10 +169,6 @@ static int __init QaModInit(void)
     return 0;
 
 failed:
-#ifdef WITH_CPA_MUX
-    if(cpa_mux_handle)
-        cpaMuxDeRegisterImpl(cpa_mux_handle);
-#endif
     return ret;
 }
 
@@ -201,10 +180,6 @@ static void __exit QaModExit(void)
 #endif
     SalCtrl_AdfServicesUnregister();
     lacSymDrbgLock_exit();
-#ifdef WITH_CPA_MUX
-    if(cpa_mux_handle)
-        cpaMuxDeRegisterImpl(cpa_mux_handle);
-#endif
     adf_exit();
     osal_exit();
     printk("Unloading SAL Module ...\n");

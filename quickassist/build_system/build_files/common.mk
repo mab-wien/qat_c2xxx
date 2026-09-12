@@ -8,7 +8,7 @@
 # 
 #   GPL LICENSE SUMMARY
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 # 
 #   This program is free software; you can redistribute it and/or modify 
 #   it under the terms of version 2 of the GNU General Public License as
@@ -30,7 +30,7 @@
 # 
 #   BSD LICENSE 
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 #   All rights reserved.
 # 
 #   Redistribution and use in source and binary forms, with or without 
@@ -60,7 +60,7 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # 
 # 
-#  version: QAT1.5.L.1.11.0-36
+#  version: QAT1.5.L.1.13.0-19
 #####
 
 ######Support $(PROG_ACY) and previous vars#################################
@@ -98,6 +98,9 @@ EXTRA_CFLAGS+=-O$($(PROG_ACY)_OPT_LEVEL)
 
 
 
+ifeq ($($(PROG_ACY)_PARAM_CHECK),y)
+EXTRA_CFLAGS+=-DICP_PARAM_CHECK
+endif
 
 PWD= $(shell pwd)
 
@@ -121,4 +124,4 @@ endef
 
 include $($(PROG_ACY)_BUILDSYSTEM_PATH)/build_files/Core/$($(PROG_ACY)_CORE).mk
 include $($(PROG_ACY)_BUILDSYSTEM_PATH)/build_files/OS/$($(PROG_ACY)_OS).mk
-
+-include $($(PROG_ACY)_BUILDSYSTEM_PATH)/build_files/defenses.mk

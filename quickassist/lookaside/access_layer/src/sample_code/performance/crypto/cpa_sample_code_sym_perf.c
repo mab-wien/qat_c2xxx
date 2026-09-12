@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  ***************************************************************************/
 
@@ -89,10 +89,6 @@
 #include "cpa_sample_code_crypto_utils.h"
 #include "cpa_sample_code_framework.h"
 #include "icp_sal_poll.h"
-
-#ifdef WITH_CPA_MUX
-#include "cpa_impl_mux.h"
-#endif
 
 #ifdef LATENCY_CODE
 #include <assert.h>
@@ -640,27 +636,29 @@ CpaStatus symPerform(symmetric_test_params_t* setup,
     pSymData->packageId = instanceInfo2.physInstId.packageId;
 
 #ifdef LATENCY_CODE
-    if(pSymData->numOperations > LATENCY_SUBMISSION_LIMIT)
-    {
-        PRINT_ERR("Error max submissions for latency  must be <= %d\n",
-                LATENCY_SUBMISSION_LIMIT);
-        return CPA_STATUS_FAIL;
+    if (latency_enable) {
+        if(pSymData->numOperations > LATENCY_SUBMISSION_LIMIT)
+        {
+            PRINT_ERR("Error max submissions for latency  must be <= %d\n",
+                    LATENCY_SUBMISSION_LIMIT);
+            return CPA_STATUS_FAIL;
+        }
+        /* Calculate how many buffer submissions between latency measurements.. */
+        pSymData->nextCount = (setup->numBuffLists * setup->numLoops)/MAX_LATENCY_COUNT;
+
+        /* .. and set the next trigger count to this */
+        pSymData->countIncrement = pSymData->nextCount;
+
+        /* How many latency measurements of the MAX_LATENCY_COUNT have been taken so far */
+        pSymData->latencyCount = 0;
+
+        /* Completion routine sets end times in the array indirectly */
+        pSymData->response_times = request_respnse_time;
+        pSymData->start_times    = request_submit_start;
+
+        if (latency_debug) PRINT("%s: LATENCY_CODE: Initial nextCount %u, countIncrement %u\n",
+                __FUNCTION__, pSymData->nextCount, pSymData->countIncrement);
     }
-    /* Calculate how many buffer submissions between latency measurements.. */
-    pSymData->nextCount = (setup->numBuffLists * setup->numLoops)/MAX_LATENCY_COUNT;
-
-    /* .. and set the next trigger count to this */
-    pSymData->countIncrement = pSymData->nextCount;
-
-    /* How many latency measurements of the MAX_LATENCY_COUNT have been taken so far */
-    pSymData->latencyCount = 0;
-
-    /* Completion routine sets end times in the array indirectly */
-    pSymData->response_times = request_respnse_time;
-    pSymData->start_times    = request_submit_start;
-
-    if (latency_debug) PRINT("%s: LATENCY_CODE: Initial nextCount %u, countIncrement %u\n",
-            __FUNCTION__, pSymData->nextCount, pSymData->countIncrement);
 #endif
     /*preset the number of ops we plan to submit*/
     pSymData->numOperations = (Cpa64U)setup->numBuffLists*setup->numLoops;
@@ -1020,7 +1018,6 @@ CpaStatus sampleSymmetricPerform( symmetric_test_params_t* setup)
         return status;
     }
 
-
         status = symPerform(setup, pSymPerfData, numOfLoops, ppOpData,
                  ppSrcBuffListArray,
                  cipherDirection);
@@ -1343,8 +1340,17 @@ CpaStatus setupSymmetricTest
     symmetricSetup->setupData.hashSetupData.digestResultLenInBytes =
         authKeyLengthInBytes;
 
+    /* GCM hash works only on 8,12 and 16 bytes, default to 16 if others */ 
+    if(CPA_CY_SYM_HASH_AES_GCM == hashAlg && 
+      (authKeyLengthInBytes != 8 && authKeyLengthInBytes != 12 && authKeyLengthInBytes != 16))
+    {
+       PRINT("CPA_CY_SYM_HASH_AES_GCM digest length %u unsupported , defaulting to 16 \n",authKeyLengthInBytes);
+       symmetricSetup->setupData.hashSetupData.digestResultLenInBytes = 16;
+    }
+
 #if CPA_CY_API_VERSION_NUM_MAJOR >= 2
 #endif
+
     // check which kind of hash mode is selected
     if(CPA_CY_SYM_HASH_MODE_NESTED == hashMode){//nested mode
         //set the struct for nested hash mode

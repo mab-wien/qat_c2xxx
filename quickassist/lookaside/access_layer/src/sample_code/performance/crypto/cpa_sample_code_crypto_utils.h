@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  ***************************************************************************/
 
@@ -85,7 +85,6 @@
 #ifdef USER_SPACE
 #include <sched.h>
 #endif
-
 
 /*
 ******************************************************************************
@@ -199,6 +198,7 @@ typedef enum ecdsa_step_s
 
 #if CPA_CY_API_VERSION_NUM_MAJOR >= 2
 #endif
+
 
 #define BUFFER_SIZE_0                       (0)
 #define BUFFER_SIZE_32                      (32)
@@ -440,6 +440,8 @@ typedef struct symmetric_test_params_s
     /*crypto source offset*/
     Cpa32U cryptoSrcOffset;
     CpaBoolean isMultiSGL;
+    /* Digest verify failures */
+    Cpa64U initialVerifyFailures;
 }symmetric_test_params_t;
 
 /**

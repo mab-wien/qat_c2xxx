@@ -6,7 +6,7 @@
 # 
 #   GPL LICENSE SUMMARY
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 # 
 #   This program is free software; you can redistribute it and/or modify 
 #   it under the terms of version 2 of the GNU General Public License as
@@ -28,7 +28,7 @@
 # 
 #   BSD LICENSE 
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 #   All rights reserved.
 # 
 #   Redistribution and use in source and binary forms, with or without 
@@ -58,79 +58,20 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # 
 # 
-#  version: QAT1.5.L.1.11.0-36
+#  version: QAT1.5.L.1.13.0-19
 ############################################################################
 
-#QA API and SAL PATHS
-ifndef ICP_ROOT
-$(error ICP_ROOT is undefined. Please set the path to your environment makefile \
-        "-> setenv ICP_ROOT <path>")
-endif
-
-ICP_API_DIR?=$(ICP_ROOT)/quickassist/include/
-ICP_LAC_DIR?=$(ICP_ROOT)/quickassist/lookaside/access_layer/
-SAMPLE_PATH?=$(ICP_ROOT)/quickassist/lookaside/access_layer/src/sample_code/functional/
-ICP_BUILD_OUTPUT?=$(ICP_ROOT)/build
-
-CMN_ROOT?=$(ICP_ROOT)/quickassist/lookaside/access_layer/src/sample_code/performance/qae/
-CMN_MODULE_NAME?=qaeMemDrv
-
-export CMN_ROOT
-export CMN_MODULE_NAME
-
-DO_CRYPTO?=1
-ifeq ($(DO_CRYPTO),1)
-        EXTRA_CFLAGS+=-DDO_CRYPTO
-endif
-
+include $(PWD)/../../common.mk
 #Add the name for the executable, Library or Module output definitions
 OUTPUT_NAME=hash_file_sample
-
-#include files
-INCLUDES += -I$(ICP_API_DIR) \
-	-I$(ICP_API_DIR)lac \
-	-I$(ICP_API_DIR)dc \
-	-I$(ICP_LAC_DIR)include \
-	-I$(SAMPLE_PATH)include
-
-ICP_OS_LEVEL?=user_space
-RM=rm -vf
-RM-DIR=rm -rfv
-
 ifeq ($(ICP_OS_LEVEL),user_space)
 #############################################################
 #
 # Build user space executible
 #
 ############################################################
-ifeq ($(WITH_CPA_MUX),1)
-        EXTRA_CFLAGS+=-DWITH_CPA_MUX
-        ADDITIONAL_OBJECTS += $(ICP_BUILD_OUTPUT)/libqat_mux_s.so
-else
-        ADDITIONAL_OBJECTS += $(ICP_BUILD_OUTPUT)/libicp_qa_al_s.so
-endif
-
-ADDITIONAL_OBJECTS += -L/usr/Lib -lpthread -lcrypto
-
-ifeq ($(WITH_UPSTREAM),1)
-        EXTRA_CFLAGS+=-DWITH_UPSTREAM
-        ADDITIONAL_OBJECTS += -ludev
-endif
-
-USER_SOURCE_FILES = ../../common/cpa_sample_utils.c cpa_hash_file_sample.c
+USER_SOURCE_FILES += ../../common/cpa_sample_utils.c cpa_hash_file_sample.c
 USER_SOURCE_FILES += cpa_hash_file_sample_user.c
-
-USER_INCLUDES= $(INCLUDES)
-USER_INCLUDES+= -I$(CMN_ROOT)/
-
-USER_SOURCE_FILES += ../../../performance/qae/linux/user_space/qae_mem_utils.c
-
-default: clean
-	$(CC) -Wall -O1 $(USER_INCLUDES)  -DUSER_SPACE $(EXTRA_CFLAGS) \
-	$(USER_SOURCE_FILES) $(ADDITIONAL_OBJECTS) -o $(OUTPUT_NAME)
-
-clean:
-	$(RM) *.o $(OUTPUT_NAME)
 
 else
 

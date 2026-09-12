@@ -6,7 +6,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -28,7 +28,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -58,7 +58,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  *****************************************************************************/
 
@@ -91,6 +91,7 @@
 static const unsigned g_uClocksPerSec = CLOCKS_PER_SEC;
 
 #define EPOLL_MAX_EVENTS 1
+#define _4K_PAGE_SIZE (4 * 1024)
 
 #if UINT_MAX == 0xFFFFFFFF
 typedef unsigned uint32_t;
@@ -144,36 +145,25 @@ static void __inline__ sampleCodeCpuid(void)
 
 static __inline__ Cpa64U sampleCodeRdtscp(void)
 {
-    volatile unsigned long a = 0, d = 0;
     Cpa64U returnval = 0;
+#ifdef __x86_64__
+    volatile unsigned long a = 0, d = 0;
 
     sampleCodeCpuid();
     asm volatile ("rdtsc" : "=a" (a), "=d" (d));
     returnval = (((Cpa64U)d) << UPPER_HALF_OF_REGISTER);
     returnval |= ((Cpa64U)a);
-
+#else
+    asm volatile ("rdtsc" : "=A" (returnval));
+#endif
     return returnval;
 }
 
 perf_cycles_t sampleCodeTimestamp(void)
 {
-#ifdef __x86_64__
     /*get time stamp twice, because we need to prime the timestamp counter*/
     sampleCodeRdtscp();
     return (perf_cycles_t)sampleCodeRdtscp();
-#else
-    /*WORK AROUND TO CALCULATE CLOCK CYCLES ON TOLAPAI AS IT SEEMS TSC IS
-         * ONLY 32BIT AND IT ROLLS OVER IN a few SECS*/
-    struct timespec t;
-    long long time=0;
-
-    clockid_t clk_id=0;
-    Cpa32U freq = sampleCodeGetCpuFreq();
-    clock_getcpuclockid(0, &clk_id);
-    clock_gettime(clk_id, &t);
-    time = t.tv_sec;
-    return (time*freq);
-#endif
 }
 
 
@@ -1004,7 +994,7 @@ static int sampleCodeEventPoll(CpaInstanceHandle instanceHandle,
                     (events[i].events & EPOLLIN))
             {
                 status = pollInstanceFn(instanceHandle, 0);
-                if(CPA_STATUS_SUCCESS != status)
+                if ((CPA_STATUS_SUCCESS != status) && (CPA_STATUS_RETRY != status))
                 {
                     PRINT_ERR("Error:poll instance returned status %d\n",
                             status);

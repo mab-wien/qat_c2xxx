@@ -4,7 +4,7 @@
 # 
 #   GPL LICENSE SUMMARY
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 # 
 #   This program is free software; you can redistribute it and/or modify 
 #   it under the terms of version 2 of the GNU General Public License as
@@ -26,7 +26,7 @@
 # 
 #   BSD LICENSE 
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 #   All rights reserved.
 # 
 #   Redistribution and use in source and binary forms, with or without 
@@ -56,7 +56,7 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # 
 # 
-#  version: QAT1.5.L.1.11.0-36
+#  version: QAT1.5.L.1.13.0-19
 ################################################################
 SAMPLE_PATH?=$(ICP_ROOT)/quickassist/lookaside/access_layer/src/sample_code/functional
 DC_PATH?=$(SAMPLE_PATH)/dc
@@ -65,6 +65,17 @@ ASYM_PATH?=$(SAMPLE_PATH)/asym
 ICP_API_DIR?=$(ICP_ROOT)/quickassist/include/
 ICP_LAC_DIR?=$(ICP_ROOT)/quickassist/lookaside/access_layer/
 
+#ifdef WITH_CMDRV
+ifeq ($(WITH_CMDRV),1)
+    ifeq ($(WITH_ICP_TARGET),1)
+        CMN_ROOT?=$(ICP_ROOT)/quickassist/utilities/libqae_mem/
+        CMN_MODULE_NAME?=libqae_mem
+    else
+        CMN_ROOT?=$(ICP_ROOT)/quickassist/utilities/libusdm_drv/
+        CMN_MODULE_NAME?=libusdm_drv
+    endif
+endif
+#endif
 CMN_ROOT?=$(ICP_ROOT)/quickassist/lookaside/access_layer/src/sample_code/performance/qae/
 CMN_MODULE_NAME?=qaeMemDrv
 

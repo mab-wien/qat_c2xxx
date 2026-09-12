@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  ***************************************************************************/
 
@@ -1260,7 +1260,8 @@ LacSymKey_KeyGenSslTls_GenCommon(CpaInstanceHandle instanceHandle,
         pNestedModeSetupData->outerHashAlgorithm =
                             (CpaCySymHashAlgorithm) hashAlgorithm;
         if (CPA_CY_KEY_TLS_OP_MASTER_SECRET_DERIVE ==
-                    pKeyGenTlsOpData->tlsOp)
+                    pKeyGenTlsOpData->tlsOp ||
+            CPA_CY_KEY_TLS_OP_USER_DEFINED == pKeyGenTlsOpData->tlsOp)
         {
             switch (hashAlgorithm)
             {
@@ -1335,7 +1336,8 @@ LacSymKey_KeyGenSslTls_GenCommon(CpaInstanceHandle instanceHandle,
          * only verify if the current operation is Master Secret Derive.
          * The other operations remain unchanged. */
         if ((uSecretLen > ICP_QAT_FW_LA_TLS_V1_1_SECRET_LEN_MAX) &&
-            (CPA_CY_KEY_TLS_OP_MASTER_SECRET_DERIVE == pKeyGenTlsOpData->tlsOp))
+            (CPA_CY_KEY_TLS_OP_MASTER_SECRET_DERIVE == pKeyGenTlsOpData->tlsOp ||
+            CPA_CY_KEY_TLS_OP_USER_DEFINED == pKeyGenTlsOpData->tlsOp))
         {
             /* secret = [s1 | s2 ]
              * s1 = outer prefix, s2 = inner prefix

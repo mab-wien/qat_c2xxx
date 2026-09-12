@@ -6,7 +6,7 @@
 # 
 #   GPL LICENSE SUMMARY
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 # 
 #   This program is free software; you can redistribute it and/or modify 
 #   it under the terms of version 2 of the GNU General Public License as
@@ -28,7 +28,7 @@
 # 
 #   BSD LICENSE 
 # 
-#   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+#   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
 #   All rights reserved.
 # 
 #   Redistribution and use in source and binary forms, with or without 
@@ -58,7 +58,7 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # 
 # 
-#  version: QAT1.5.L.1.11.0-36
+#  version: QAT1.5.L.1.13.0-19
 ############################################################################
 
 
@@ -76,9 +76,20 @@ ICP_OS_LEVEL?=kernel_space
 ICP_BUILD_OUTPUT?=$(ICP_ROOT)/build
 INCLUDE_COMPRESSION=1
 
+#ifdef WITH_CMDRV
+ifeq ($(WITH_CMDRV),1)
+    ifeq ($(WITH_ICP_TARGET),1)
+        CMN_ROOT?=$(ICP_ROOT)/quickassist/utilities/libqae_mem/
+        CMN_MODULE_NAME?=libqae_mem
+    else
+        CMN_ROOT?=$(ICP_ROOT)/quickassist/utilities/libusdm_drv/
+        CMN_MODULE_NAME?=libusdm_drv
+    endif
+endif
+#endif
+
 CMN_ROOT?=$(ICP_ROOT)/quickassist/lookaside/access_layer/src/sample_code/performance/qae/
 CMN_MODULE_NAME?=qaeMemDrv
-
 export CMN_ROOT
 export CMN_MODULE_NAME
 
@@ -105,6 +116,11 @@ ifeq ($(DO_CRYPTO),1)
 EXTRA_CFLAGS += -DDO_CRYPTO
 endif
 
+ifeq ($(SC_BNP_ENABLED),1)
+        EXTRA_CFLAGS += -DSC_BNP_ENABLED
+endif
+
+
 SOURCES:= framework/$(OS)/$(ICP_OS_LEVEL)/cpa_sample_code_utils.c \
 	framework/cpa_sample_code_framework.c \
 	cpa_sample_code_main.c 
@@ -129,7 +145,10 @@ SOURCES+=  compression/cpa_sample_code_dc_utils.c \
 	compression/cpa_sample_code_dc_dp.c \
 	compression/cpa_sample_code_dc_2k.c \
 	compression/cpa_sample_code_dc_stateful.c \
-	compression/cpa_sample_code_zlib.c
+	compression/cpa_sample_code_zlib.c 
+ifeq ($(SC_BNP_ENABLED),1)
+SOURCES+=  compression/batch_and_pack/cpa_sample_code_dc_bnp.c
+endif
 	
 EXTRA_CFLAGS += -DINCLUDE_COMPRESSION
 endif
@@ -147,6 +166,18 @@ endif
 	
 ifeq ($(LATENCY_CODE),1)
 	EXTRA_CFLAGS += -DLATENCY_CODE=1
+endif
+
+ifeq ($(STV_BUFFER_SIZE_DEBUG),1)
+	EXTRA_CFLAGS += -DSTV_BUFFER_SIZE_DEBUG=1
+endif
+
+ifeq ($(STV_ADD_TEST_IDS),1)
+	EXTRA_CFLAGS += -DSTV_ADD_TEST_IDS=1
+endif
+
+ifeq ($(STV_DIRECTION_CONTROL),1)
+	EXTRA_CFLAGS += -DSTV_DIRECTION_CONTROL=1
 endif
 
 
@@ -175,22 +206,39 @@ INCLUDES += -I$(PERF_SAMPLE_SRC_ROOT) \
 	-I$(PERF_SAMPLE_SRC_ROOT)/framework/$(OS)/$(ICP_OS_LEVEL) \
 	-I$(PERF_SAMPLE_SRC_ROOT)/crypto/ \
 	-I$(PERF_SAMPLE_SRC_ROOT)/compression/ \
+        -I$(PERF_SAMPLE_SRC_ROOT)/compression/batch_and_pack/ \
 	-I$(CMN_ROOT)/
 
-SOURCES += qae/$(OS)/$(ICP_OS_LEVEL)/qae_mem_utils.c
+ifeq ($(WITH_CMDRV),1)
+	EXTRA_CFLAGS+=-DWITH_CMDRV
+else
+        SOURCES += qae/$(OS)/$(ICP_OS_LEVEL)/qae_mem_utils.c
+endif
 
 	
 ifeq ($(ICP_OS_LEVEL),user_space)
 EXTRA_CFLAGS += -DUSER_SPACE -D_GNU_SOURCE
 LD_LIBRARY_PATH?=$(ICP_BUILD_OUTPUT)
 
-ifeq ($(WITH_CPA_MUX),1)
-	EXTRA_CFLAGS+=-DWITH_CPA_MUX
-	ADDITIONAL_OBJECTS += $(ICP_BUILD_OUTPUT)/libqat_mux_s.so
+ifeq ($(WITH_UPSTREAM),1)
+    ifeq ($(WITH_ICP_TARGET),1)
+        ADDITIONAL_OBJECTS += $(ICP_BUILD_OUTPUT)/libicp_qa_al_s.so
+    else
+        ADDITIONAL_OBJECTS += $(ICP_BUILD_OUTPUT)/libqat_s.so
+    endif
 else
 	ADDITIONAL_OBJECTS += $(ICP_BUILD_OUTPUT)/libicp_qa_al_s.so
 endif
 
+#ifdef WITH_CMDRV
+ifeq ($(WITH_CMDRV),1)
+	ifeq ($(WITH_ICP_TARGET),1)
+	ADDITIONAL_OBJECTS += $(ICP_BUILD_OUTPUT)/libqae_mem.a
+	else
+	ADDITIONAL_OBJECTS += $(ICP_BUILD_OUTPUT)/libusdm_drv.a
+	endif
+endif
+#endif
 
 ADDITIONAL_OBJECTS += -L/Lib -lpthread
 ADDITIONAL_OBJECTS += -lcrypto -lrt
@@ -215,6 +263,12 @@ endif
 else
 EXTRA_CFLAGS += -DKERNEL_SPACE
 
+#ifdef WITH_CMDRV
+ifeq ($(WITH_CMDRV),1)
+	EXTRA_LDFLAGS += $(CMN_ROOT)/$(OS)/build/$(ICP_OS)/kernel_space/qae_mem_utils.o
+endif
+#endif
+
 KBUILD_EXTRA_SYMBOLS += $(PERF_SAMPLE_SRC_ROOT)/../../Module.symvers
 export $KBUILD_EXTRA_SYMBOLS
 endif
@@ -237,11 +291,11 @@ endif
 clean: perf_clean
 perf_clean:
 	@echo ; echo "Cleaning performance generated files. $(PERF_SAMPLE_SRC_ROOT) "; 
-	$(RM) $(PERF_SAMPLE_SRC_ROOT)/build/linux_2.6/user_space/*;
+	$(RM) $(PERF_SAMPLE_SRC_ROOT)/build/$(ICP_OS)/user_space/*;
 	$(RM) $(PERF_SAMPLE_SRC_ROOT)/crypto/.*.o.cmd ;
 	$(RM) $(PERF_SAMPLE_SRC_ROOT)/compression/.*.o.cmd ;
 	$(RM) $(PERF_SAMPLE_SRC_ROOT)/framework/.*.o.cmd ;
-	$(RM) $(PERF_SAMPLE_SRC_ROOT)/framework/linux/kernel_space/.*.o.cmd ;
+	$(RM) $(PERF_SAMPLE_SRC_ROOT)/framework/$(OS)/kernel_space/.*.o.cmd ;
 
 
 ###################Include rules makefiles########################

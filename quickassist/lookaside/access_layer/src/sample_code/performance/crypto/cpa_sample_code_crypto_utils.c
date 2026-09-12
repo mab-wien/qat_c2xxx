@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  ***************************************************************************/
 
@@ -162,6 +162,65 @@ extern int isLatencyEnabled();
 
 
 sample_code_thread_t* pollingThread_g;
+
+#ifdef STV_DIRECTION_CONTROL
+
+/* Enabling this allows greater control of the chaining test */
+int stv_direction_control_enable = CPA_FALSE;
+
+/* Default is encrypt */
+CpaCySymCipherDirection stvCipherDirection = CPA_CY_SYM_CIPHER_DIRECTION_ENCRYPT;
+
+void stvSetCipherDirection( int direction )
+{
+    if ((direction != CPA_CY_SYM_CIPHER_DIRECTION_ENCRYPT) &&
+        (direction != CPA_CY_SYM_CIPHER_DIRECTION_DECRYPT))
+    {
+        PRINT( "%s: ERROR: direction must be encrypt (%d) or decrypt (%d)\n",
+                __FUNCTION__,
+                CPA_CY_SYM_CIPHER_DIRECTION_ENCRYPT,
+                CPA_CY_SYM_CIPHER_DIRECTION_DECRYPT );
+    }
+    else {
+        /* The user has implied they want greater control.. */
+        stv_direction_control_enable = CPA_TRUE;
+
+        /*
+         * This overrules the hard coded value in sampleSymmetricDpPerform()
+         */
+        cipherDirection_g = stvCipherDirection = direction;
+        if (direction == CPA_CY_SYM_CIPHER_DIRECTION_ENCRYPT)
+        {
+            PRINT( "%s: INFO: direction now CPA_CY_SYM_CIPHER_DIRECTION_ENCRYPT(%d)\n",
+                    __FUNCTION__,
+                    CPA_CY_SYM_CIPHER_DIRECTION_ENCRYPT );
+        }
+        else
+        {
+            PRINT( "%s: INFO: direction now CPA_CY_SYM_CIPHER_DIRECTION_DECRYPT(%d)\n",
+                    __FUNCTION__,
+                    CPA_CY_SYM_CIPHER_DIRECTION_DECRYPT );
+        }
+    }
+}
+#endif
+
+
+#ifdef STV_BUFFER_SIZE_DEBUG
+int stv_buffer_size_debug_enabled_g;
+
+EXPORT_SYMBOL(enableStvBufferSizeDebug);
+
+/* Created to allow me to verify scatter gather list (SGL)
+ * buffer allocations
+ */
+void enableStvBufferSizeDebug()
+{
+    stv_buffer_size_debug_enabled_g = 1;
+    PRINT("%s: stv_buffer_size_debug_enabled_g = 1\n",
+                        __FUNCTION__ );
+}
+#endif
 
 Cpa32U getThroughput(Cpa64U numPackets, Cpa32U packetSize,perf_cycles_t cycles)
 {
@@ -359,6 +418,23 @@ CpaStatus printAsymStatsAndStopServices(thread_creation_data_t* data)
         PRINT("Total Cycles          %llu\n", numOfCycles);
         PRINT("CPU Frequency(kHz)    %u\n", sampleCodeGetCpuFreq());
         PRINT("Operations per second %8u\n", throughput);
+#ifdef STV_ADD_TEST_IDS
+        PRINT("STV Test ID           %s\n", stv_test_id );
+        PRINT("STV Test Name         %s\n", stv_test_id_name );
+
+        if (stv_test_id[0] != 0)
+        {
+           Cpa32U stv_test_number;
+
+           /* As we have a defined number let's increment it
+            * to cover a range of tests, e.g. different packet sizes.
+            * Tester can still override this number with setSTVTestID()
+            */
+           sscanf( stv_test_id, "%06d", &stv_test_number );
+           sprintf( stv_test_id, "%06d", stv_test_number+1 );
+        }
+#endif
+
     }
     qaeMemFree((void **)&stats2);
     qaeMemFree((void **)&perfDataDeviceOffsets);
@@ -593,6 +669,15 @@ CpaStatus sampleCreateBuffers(CpaInstanceHandle instanceHandle,
     CpaFlatBuffer *pTempFlatBuffArray = NULL;
 
 
+#ifdef STV_BUFFER_SIZE_DEBUG
+    if (stv_buffer_size_debug_enabled_g)
+    {
+        PRINT("%s: numBufferLists = %d\n",
+                __FUNCTION__, (int)numBufferLists);
+        PRINT("%s: flatBufferSizeInBytes = %d\n",
+                __FUNCTION__, (int)setup->flatBufferSizeInBytes);
+    }
+#endif
     if(NULL == pFlatBuffArray)
     {
         PRINT_ERR("pFlatBuffArray is NULL\n");
@@ -618,12 +703,29 @@ CpaStatus sampleCreateBuffers(CpaInstanceHandle instanceHandle,
     if ( 0 == setup->flatBufferSizeInBytes )
     {
         numBuffers = NUM_UNCHAINED_BUFFERS;
+#ifdef STV_BUFFER_SIZE_DEBUG
+        if (stv_buffer_size_debug_enabled_g)
+        {
+            PRINT("%s: numBuffers = NUM_UNCHAINED_BUFFERS = %d\n",
+                    __FUNCTION__, (int)numBuffers);
+        }
+#endif
     }
     else
     {
         numBuffers = (packetSizeInBytes[0] -
                     setup->setupData.hashSetupData.digestResultLenInBytes)/
                     setup->flatBufferSizeInBytes;
+#ifdef STV_BUFFER_SIZE_DEBUG
+        if (stv_buffer_size_debug_enabled_g)
+        {
+            PRINT("%s: numBufferLists=%d, numBuffers=%d\n",
+                    __FUNCTION__,
+                    (int)numBufferLists,
+                    (int)numBuffers);
+        }
+#endif
+
     }
     /*
      * calculate memory size which is required for pPrivateMetaData
@@ -680,6 +782,16 @@ CpaStatus sampleCreateBuffers(CpaInstanceHandle instanceHandle,
                 bufferSizeInBytes = setup->flatBufferSizeInBytes +
                 setup->setupData.hashSetupData.digestResultLenInBytes;
             }
+#ifdef STV_BUFFER_SIZE_DEBUG
+            if (stv_buffer_size_debug_enabled_g)
+            {
+                PRINT("%s: #%d bufferSizeInBytes = %d\n",
+                        __FUNCTION__,
+                        (int)createBufferCount,
+                        (int)bufferSizeInBytes);
+            }
+#endif
+
             /* Allocate aligned memory for specified packet size on the node
              * that the thread is running on*/
             pTempFlatBuffArray[createBufferCount].pData = qaeMemAllocNUMA(
@@ -883,6 +995,15 @@ CpaStatus dpSampleCreateBuffers(CpaInstanceHandle instanceHandle,
     Cpa32U         bufferSizeInBytes   = 0;
     Cpa32U         numBufferLists      = setup->numBuffLists;
     Cpa32U         numBuffers          = 0;
+#ifdef STV_BUFFER_SIZE_DEBUG
+    if (stv_buffer_size_debug_enabled_g)
+    {
+        PRINT("%s: numBufferLists = %d\n",
+                __FUNCTION__, (int)numBufferLists);
+        PRINT("%s: flatBufferSizeInBytes = %d\n",
+                __FUNCTION__, (int)setup->flatBufferSizeInBytes);
+    }
+#endif
 
     if(NULL == pBuffListArray)
     {
@@ -904,6 +1025,13 @@ CpaStatus dpSampleCreateBuffers(CpaInstanceHandle instanceHandle,
     if ( 0 == setup->flatBufferSizeInBytes )
     {
         numBuffers = NUM_UNCHAINED_BUFFERS;
+#ifdef STV_BUFFER_SIZE_DEBUG
+        if (stv_buffer_size_debug_enabled_g)
+        {
+            PRINT("%s: numBuffers = NUM_UNCHAINED_BUFFERS = %d\n",
+                    __FUNCTION__, (int)numBuffers);
+        }
+#endif
     }
     else
     {
@@ -920,6 +1048,15 @@ CpaStatus dpSampleCreateBuffers(CpaInstanceHandle instanceHandle,
                         setup->setupData.hashSetupData.digestResultLenInBytes)/
                         setup->flatBufferSizeInBytes;
         }
+#ifdef STV_BUFFER_SIZE_DEBUG
+        if (stv_buffer_size_debug_enabled_g)
+        {
+            PRINT("%s: numBufferLists=%d, numBuffers=%d\n",
+                    __FUNCTION__,
+                    (int)numBufferLists,
+                    (int)numBuffers);
+        }
+#endif
     }
 
     /*
@@ -1014,7 +1151,15 @@ CpaStatus dpSampleCreateBuffers(CpaInstanceHandle instanceHandle,
             {
                 bufferSizeInBytes = setup->flatBufferSizeInBytes;
             }
-
+#ifdef STV_BUFFER_SIZE_DEBUG
+            if (stv_buffer_size_debug_enabled_g)
+            {
+                PRINT("%s: #%d bufferSizeInBytes = %d\n",
+                        __FUNCTION__,
+                        (int)createBufferCount,
+                        (int)bufferSizeInBytes);
+            }
+#endif
             /* Allocate aligned memory for specified packet size on the node
              * that the thread is running on*/
             pFlatBuffArray[createBufferCount].pData = qaeMemAllocNUMA(
@@ -1039,9 +1184,9 @@ CpaStatus dpSampleCreateBuffers(CpaInstanceHandle instanceHandle,
 
             pPhyBuffListArray[createListCount]->
                flatBuffers[createBufferCount].bufferPhysAddr =
-               (CpaPhysicalAddr)(SAMPLE_CODE_UINT)
+               (CpaPhysicalAddr)
                qaeVirtToPhysNUMA((SAMPLE_CODE_UINT *)
-               (SAMPLE_CODE_UINT )pFlatBuffArray[createBufferCount].pData);
+               (uintptr_t)pFlatBuffArray[createBufferCount].pData);
             pPhyBuffListArray[createListCount]->
                flatBuffers[createBufferCount].dataLenInBytes
               = pFlatBuffArray[createBufferCount].dataLenInBytes;
@@ -2415,6 +2560,18 @@ void printSymTestType(symmetric_test_params_t *setup)
         printCipherAlg(setup->setupData.cipherSetupData);
         PRINT(" ");
         printHashAlg(setup->setupData.hashSetupData);
+#ifdef LATENCY_CODE
+        // We need to know the direction for performance script processing
+        PRINT("\nCipher ");
+        if(cipherDirection_g == CPA_CY_SYM_CIPHER_DIRECTION_ENCRYPT)
+        {
+            PRINT("Encrypt ");
+        }
+        else
+        {
+            PRINT("Decrypt ");
+        }
+#endif
     }
     PRINT("\n");
     if(setup->isDpApi)
@@ -2608,7 +2765,7 @@ CpaStatus printSymmetricPerfDataAndStopCyService(thread_creation_data_t* data)
 
 
     printSymTestType(setup);
-    if(setup->performanceStats->averagePacketSizeInBytes == PACKET_IMIX)
+    if(data->packetSize == PACKET_IMIX)
     {
         PRINT("Packet Mix\
         40%%-64B 20%%-752B 35%% 1504B 5%%-8892B\n");
@@ -2658,6 +2815,22 @@ CpaStatus printSymmetricPerfDataAndStopCyService(thread_creation_data_t* data)
             uSecs = (perf_cycles_t)(1000 * stats.maxLatency / cpuFreqKHz);
             PRINT("Max. Latency (uSecs)   %llu\n", uSecs);
         }
+#endif
+#ifdef STV_ADD_TEST_IDS
+    PRINT("STV Test ID           %s\n", stv_test_id );
+    PRINT("STV Test Name         %s\n", stv_test_id_name );
+
+    if (stv_test_id[0] != 0)
+    {
+        Cpa32U stv_test_number;
+
+        /* As we have a defined number let's increment it
+         * to cover a range of tests, e.g. different packet sizes.
+         * Tester can still override this number with setSTVTestID()
+         */
+        sscanf( stv_test_id, "%06d", &stv_test_number );
+        sprintf( stv_test_id, "%06d", stv_test_number+1 );
+    }
 #endif
     }
     qaeMemFree((void **)&stats2);

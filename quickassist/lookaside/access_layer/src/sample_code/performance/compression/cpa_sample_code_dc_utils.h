@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  ***************************************************************************/
 
@@ -97,6 +97,7 @@
 
 /* corpus Data structure */
 extern corpus_data_t corpus_g;
+extern corpus_data_t bnp_corpus_g;
 extern CpaBoolean useZlib_g;
 extern Cpa32U expansionFactor_g;
 #ifdef ZERO_BYTE_LAST_REQUEST
@@ -432,5 +433,9 @@ CpaStatus useAccelCompression(void);
 CpaStatus dcPollNumOperations(perf_data_t *pPerfData,
                 CpaInstanceHandle instanceHandle, Cpa64U numOperations);
 
+CpaStatus dcSampleCreateStatefulContextBuffer(Cpa32U buffSize,
+        Cpa32U metaSize,CpaBufferList **pBuffListArray, Cpa32U nodeId);
+
+CpaStatus dcSampleFreeStatefulContextBuffer3(CpaBufferList *pBuffListArray);
 
 #endif /* CPA_SAMPLE_CODE_DC_UTILS_H_ */

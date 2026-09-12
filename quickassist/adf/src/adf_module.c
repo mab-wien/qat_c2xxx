@@ -5,7 +5,7 @@
  * 
  *   GPL LICENSE SUMMARY
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  * 
  *   This program is free software; you can redistribute it and/or modify 
  *   it under the terms of version 2 of the GNU General Public License as
@@ -27,7 +27,7 @@
  * 
  *   BSD LICENSE 
  * 
- *   Copyright(c) 2007-2013 Intel Corporation. All rights reserved.
+ *   Copyright(c) 2007-2016 Intel Corporation. All rights reserved.
  *   All rights reserved.
  * 
  *   Redistribution and use in source and binary forms, with or without 
@@ -57,7 +57,7 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  * 
- *  version: QAT1.5.L.1.11.0-36
+ *  version: QAT1.5.L.1.13.0-19
  *
  *****************************************************************************/
 
@@ -253,7 +253,7 @@ EXPORT_SYMBOL (osalIOMMUgetRemappingSize);
 /*
  * Osal lib entry points
  */
-extern int  __init osal_init(char* path);
+extern int  __init osal_init(void);
 extern void __exit osal_exit(void);
 extern int adf_init_sriov(void);
 extern void adf_exit_sriov(void);
@@ -307,7 +307,7 @@ STATIC int __init adf_module_init(void)
 #ifdef ONE_KO_RELEASE_PACKAGE
                 status = osal_init();
 #else
-                status = register_mem_device_driver(NULL);
+                status = register_mem_device_driver();
 #endif
         }
         return status;
