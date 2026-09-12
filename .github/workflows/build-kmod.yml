@@ -1,0 +1,37 @@
+name: Build kernel module
+
+on:
+  push:
+    branches: [ '**' ]
+  pull_request:
+    branches: [ '**' ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show kernel version
+        run: uname -r
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential "linux-headers-$(uname -r)"
+
+      - name: Build icp_qa_al.ko
+        run: make kmod
+
+      - name: Verify module was built
+        run: |
+          test -f build/icp_qa_al.ko
+          file build/icp_qa_al.ko
+          modinfo build/icp_qa_al.ko || true
+
+      - name: Upload built module
+        uses: actions/upload-artifact@v4
+        with:
+          name: icp_qa_al-${{ github.sha }}
+          path: build/icp_qa_al.ko
