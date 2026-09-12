@@ -90,6 +90,8 @@
         switch(0){case 0: case pred:;}
 
 
+extern void LacDsa_CompileTimeAssertions(void);
+
 void LacDsa_CompileTimeAssertions(void)
 {
     /* *************************************************************

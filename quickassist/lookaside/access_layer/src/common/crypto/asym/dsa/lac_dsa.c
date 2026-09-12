@@ -3161,6 +3161,8 @@ LacDsa_Init(CpaInstanceHandle instanceHandle)
         LAC_DSA_STATS_INIT(pCryptoService);
     }
 
+    extern void LacDsa_CompileTimeAssertions(void);
+
    /* Call compile time param check function to ensure it is included
       in the build by the compiler */
     LacDsa_CompileTimeAssertions();
