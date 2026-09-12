@@ -99,6 +99,7 @@
 #include "lac_sal_types_crypto.h"
 #include "sal_service_state.h"
 #include "lac_sym_auth_enc.h"
+#include "icp_sal_poll.h"
 
 typedef void (*write_ringMsgFunc_t)(CpaCySymDpOpData *pRequest,
           icp_qat_fw_la_bulk_req_t *pCurrentQatMsg,
@@ -411,6 +412,11 @@ LacDp_EnqueueParamCheck(const CpaCySymDpOpData *pRequest)
  *
  *****************************************************************************/
 
+extern void
+LacDp_WriteRingMsgOpt(CpaCySymDpOpData *pRequest,icp_qat_fw_la_bulk_req_t
+                      *pCurrentQatMsg,
+                      const CpaInstanceHandle instanceHandle);
+
 void
 LacDp_WriteRingMsgOpt(CpaCySymDpOpData *pRequest,icp_qat_fw_la_bulk_req_t
                       *pCurrentQatMsg,
@@ -520,6 +526,11 @@ LacDp_WriteRingMsgOpt(CpaCySymDpOpData *pRequest,icp_qat_fw_la_bulk_req_t
  * @retval none
  *
  *****************************************************************************/
+
+extern void
+LacDp_WriteRingMsgFull(CpaCySymDpOpData *pRequest,
+		               icp_qat_fw_la_bulk_req_t *pCurrentQatMsg,
+		               const CpaInstanceHandle instanceHandle);
 
 void
 LacDp_WriteRingMsgFull(CpaCySymDpOpData *pRequest,
