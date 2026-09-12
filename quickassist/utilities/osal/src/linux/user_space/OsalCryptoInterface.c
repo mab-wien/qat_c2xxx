@@ -78,7 +78,7 @@ OSAL_STATUS
 osalHashSHA1(UINT8 *in, UINT8 *out)
 {
     SHA_CTX ctx;
-    if(!SHA_Init(&ctx))
+    if(!SHA1_Init(&ctx))
     {
         return OSAL_FAIL;
     }

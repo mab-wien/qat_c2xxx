@@ -109,7 +109,7 @@ extern "C"
 #include <linux/string.h>
 #include <linux/ctype.h>
 #include <linux/sched.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #else /*KERNEL_SPACE*/
 #include <string.h>
 #include <sched.h>

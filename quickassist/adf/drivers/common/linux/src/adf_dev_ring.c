@@ -87,6 +87,7 @@
 #include "icp_adf_init.h"
 #include "icp_adf_cfg.h"
 #include "adf_proc_debug.h"
+#include <linux/sched/signal.h>
 
 #define ADF_DEV_RING_NAME            ("icp_dev_ring")
 #define ADF_DEV_RING_MAX_MINOR       (255)

@@ -222,6 +222,7 @@ CpaStatus adf_aeFwLoad(icp_accel_dev_t *pAccelDev)
     /* Get the UoF FW and Map the memory to the AEs */
     status = adf_aefwGetFirmware(pAccelDev, ADF_FW_UOF_TYPE, &addr, &size);
     ICP_CHECK_STATUS(status);
+
     /* load ucode for patching, ucode_map */
     status = adf_aeUcodeMap(pAccelDev, addr, size);
     if (CPA_STATUS_SUCCESS != status)

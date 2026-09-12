@@ -185,7 +185,7 @@ icp_FirmLoader_MapMofAddr(void *handle,
     int status = ICP_FIRMLOADER_SUCCESS;
         
     myHandle = (icp_firml_handle_t *)handle;
-    
+
     status = UcLo_MapMofAddr(myHandle, filePtr, fileSize, 
                              uofName, (char **)uofPtr, uofSize);
 
