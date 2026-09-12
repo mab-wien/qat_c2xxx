@@ -79,6 +79,12 @@
 #include "inflate.h"
 #include "inffast.h"
 
+/* Vendored, unmodified zlib inflate() state machine intentionally falls
+ * through between case labels (this is the whole point of the design) -
+ * silence the warning for this one imported file rather than annotating
+ * ~18 individual sites in upstream Mark Adler zlib code. */
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+
 #ifdef MAKEFIXED
 #  ifndef BUILDFIXED
 #    define BUILDFIXED
