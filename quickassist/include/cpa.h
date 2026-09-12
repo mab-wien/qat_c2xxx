@@ -694,12 +694,20 @@ typedef enum _CpaInstanceEvent
      * implementation may send this event if the hardware device is about to
      * be reset.
      */
-    CPA_INSTANCE_EVENT_RESTARTED
+    CPA_INSTANCE_EVENT_RESTARTED,
     /**< Event type that triggers the registered instance notification callback
      * function when and instance has restarted. The reason why an instance has
      * restarted is implementation specific. For example a hardware
      * implementation may send this event after the hardware device has
      * been reset.
+     */
+
+    CPA_INSTANCE_EVENT_FATAL_ERROR
+    /**< Event type that triggers the registered instance notification callback
+     * function when an error has been detected that requires the device
+     * to be reset. 
+     * This event will be sent by all instances using the device, both on the 
+     * host and guests. 
      */
 } CpaInstanceEvent;
 
