@@ -161,7 +161,7 @@ QatCtrl_ResponseMsgHandler(icp_comms_trans_handle trans_handle,
  * Init response handler function. The response message is checked
  * and the callback called.
  */
-void
+static void
 QatCtrl_InitRespHandler(void *pRespMsg, icp_arch_if_request_t msgType)
 {
     CpaStatus status = CPA_STATUS_FAIL;
@@ -230,7 +230,7 @@ QatCtrl_ResponseCbSet(sal_qat_service_t* qatInstance)
 /*
  * Init Sync Callback function.
  */
-void
+static void
 QatCtrl_InitSyncCb(void *pCallbackTag, CpaStatus status)
 {
     LacSync_GenWakeupSyncCaller(pCallbackTag, status);
@@ -438,7 +438,7 @@ QatCtrl_BuildAndSendMsg(CpaInstanceHandle instanceHandle,
  * @pre @ref QatCtrl_Init() must have been called already
  *
  *****************************************************************************/
-CpaStatus QatCtrl_BuildShramMask(Cpa64U *ShramMask,
+static CpaStatus QatCtrl_BuildShramMask(Cpa64U *ShramMask,
                                  Cpa32U activeAes, Cpa32U aeIndex)
 {
     *ShramMask = 0;
@@ -497,7 +497,7 @@ CpaStatus QatCtrl_BuildShramMask(Cpa64U *ShramMask,
 /*
  * Build the SliceMask for the SET_AE_INFO msg
  */
-CpaStatus QatCtrl_BuildSliceMask(Cpa16U *SliceMask,
+static CpaStatus QatCtrl_BuildSliceMask(Cpa16U *SliceMask,
                                  Cpa32U serviceMask,
                                  Cpa32U shramInitFlag)
 {
