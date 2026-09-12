@@ -1,0 +1,58 @@
+name: Auto-fix CI failures
+
+on:
+  workflow_run:
+    workflows: ["Build kernel module"]
+    types: [completed]
+
+concurrency:
+  group: claude-autofix-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  autofix:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            The "Build kernel module" CI workflow just failed on branch
+            ${{ github.event.workflow_run.head_branch }}
+            (run: ${{ github.event.workflow_run.html_url }}, id: ${{ github.event.workflow_run.id }}).
+
+            Read the failure logs with:
+              gh run view ${{ github.event.workflow_run.id }} --log-failed
+
+            Diagnose the actual root cause (grep for the real error, check the
+            exact file/line involved - don't guess). This repo's own commit
+            history on this branch already fixes several similar issues
+            (missing ICP_ENV_DIR/ICP_BUILDSYSTEM_PATH defaults, EXTRA_CFLAGS
+            not being honored by modern Kbuild - see the ccflags-y fix) -
+            follow that same minimal, targeted style: only rebuild an API
+            when the kernel genuinely removed it or changed behavior,
+            otherwise leave the vendor code untouched.
+
+            Apply the fix, commit it with a clear message explaining the
+            root cause (end the commit message with a
+            "Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" line),
+            and push directly to this branch so CI re-runs automatically.
+
+            If you cannot find a real fix after investigating, do not guess -
+            open an issue on this repo instead, describing exactly what you
+            found and why you're stuck.
+          claude_args: |
+            --max-turns 30
+            --allowedTools "Bash,Read,Edit,Write,Grep,Glob"
