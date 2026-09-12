@@ -170,6 +170,10 @@ void LacDp_WriteRingMsgOpt(CpaCySymDpOpData *pRequest,icp_qat_fw_la_bulk_req_t
  * @return void
  *
  *****************************************************************************/
+extern void LacSync_GenBufListVerifyCb(void *pCallbackTag,CpaStatus status,
+                CpaCySymOp operationType, void *pOpData,
+                CpaBufferList *pDstBuffer, CpaBoolean opResult);
+
 void LacSync_GenBufListVerifyCb(void *pCallbackTag,CpaStatus status,
                 CpaCySymOp operationType, void *pOpData,
                 CpaBufferList *pDstBuffer, CpaBoolean opResult)
