@@ -435,7 +435,7 @@ icp_adf_subsystemUnregister(subservice_registation_handle_t* subsystem_hdl)
  * adf_cfgAddInternalValues
  * Add internal config values to general section of the given accel dev
  */
-CpaStatus
+static CpaStatus
 adf_cfgAddInternalValues(icp_accel_dev_t *accel_dev)
 {
     CpaStatus status = CPA_STATUS_FAIL;
