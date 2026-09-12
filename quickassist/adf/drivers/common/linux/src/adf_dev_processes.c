@@ -161,7 +161,7 @@ static DECLARE_MUTEX(processes_list_sema);
  * adf_processes_chrdev_unregister
  * Function unregisters character device interface
  */
-static void adf_processes_chrdev_unregister(void)
+static void __attribute__((unused)) adf_processes_chrdev_unregister(void)
 {
         adf_chr_drv_destroy(&adf_processes_drv_info);
 }
