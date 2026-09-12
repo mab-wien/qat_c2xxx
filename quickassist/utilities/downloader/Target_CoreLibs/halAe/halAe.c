@@ -3395,7 +3395,7 @@ halAe_Start(icp_firml_handle_t *handle,
  * @retval HALAE_BADARG Bad function argument
  * 
  *****************************************************************************/
-int 
+static int __attribute__((unused))
 halAe_StartAuthenticatedME (icp_firml_handle_t *handle, 
             unsigned char ae)
 {
