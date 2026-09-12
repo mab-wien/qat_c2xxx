@@ -104,6 +104,7 @@
 #include "lac_sal_types_crypto.h"
 #include "lac_common.h"
 #include "lac_mem.h"
+#include "lac_hooks.h"
 
 /**
  *******************************************************************************
