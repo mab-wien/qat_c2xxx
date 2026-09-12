@@ -214,7 +214,7 @@ void adf_ring_chrdev_unregister(void)
 /*
  * Dummy kernelspace callback for userspace rings
  */
-void adf_ring_dummy_callback(icp_comms_trans_handle comms_handle, void *pMsg)
+static void adf_ring_dummy_callback(icp_comms_trans_handle comms_handle, void *pMsg)
 {
         /* The real callback lives in user space */
         return;
