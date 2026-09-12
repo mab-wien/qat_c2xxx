@@ -67,12 +67,12 @@ $(OUTPUT_NAME)-objs := $(patsubst %.c,%.o, $(MODULE_SOURCES)) $(ADDITIONAL_KERNE
 else
 obj-m+=$(OUTPUT_NAME).o
 $(OUTPUT_NAME)-objs :=lib.a $(patsubst %.c,%.o, $(MODULE_SOURCES)) $(ADDITIONAL_KERNEL_LIBS)
-lib-m := $(patsubst %.c,%.o, $(SOURCES)) $(patsubst %.S,%.o, $(ASM_SOURCES))
+lib-y := $(patsubst %.c,%.o, $(SOURCES)) $(patsubst %.S,%.o, $(ASM_SOURCES))
 endif
 
 $(LIB_STATIC): dirs
 	@echo 'Creating static library ${LIB_STATIC}'; \
-	$(MAKE) -C $(KERNEL_SOURCE_ROOT)/ M=$(PWD) obj-m=""; \
+	$(MAKE) -C $(KERNEL_SOURCE_ROOT)/ M=$(PWD) obj-m="" lib.a; \
 	echo 'Copying outputs $(OBJ)';\
 	test -f lib.a  &&  (ar -t lib.a | xargs ar -rcsD $($(PROG_ACY)_FINAL_OUTPUT_DIR)/$(LIB_STATIC)); \
 	for f in $(OBJ); do test -f "$$f" && mv -f "$$f" $($(PROG_ACY)_FINAL_OUTPUT_DIR); done; \
