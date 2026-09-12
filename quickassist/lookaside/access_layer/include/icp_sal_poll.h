@@ -165,7 +165,7 @@ icp_sal_CyPollInstance(CpaInstanceHandle instanceHandle,
   *************************************************************************/
 CpaStatus
 icp_sal_CyPollDpInstance(CpaInstanceHandle instanceHandle,
-                         Cpa32U response_quota);
+                         Cpa8U response_quota);
 
 /*************************************************************************
   * @ingroup SalPoll
