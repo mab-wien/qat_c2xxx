@@ -290,7 +290,7 @@ CpaBoolean SalCtrl_IsServiceEnabled(Cpa32U enabled_services,
  * param[in] enabled_services    It is the bitmask for the enabled services
  */
 
-CpaStatus SalCtrl_GetSupportedServices(icp_accel_dev_t* device,
+static CpaStatus SalCtrl_GetSupportedServices(icp_accel_dev_t* device,
     Cpa32U enabled_services)
 {
     CpaStatus status = CPA_STATUS_SUCCESS;
