@@ -94,7 +94,7 @@ STATIC dyn_dc_instance_t *dc_instance_table_head[ADF_MAX_DEVICES];
 /*
  * Dummy kernelspace callback for dyn rings
  */
-void adf_dyn_dummy_callback(icp_comms_trans_handle comms_handle, void *pMsg)
+static void adf_dyn_dummy_callback(icp_comms_trans_handle comms_handle, void *pMsg)
 {
         /* The real callback lives in dyn */
         return;
