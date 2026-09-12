@@ -436,7 +436,7 @@ STATIC CpaStatus SalCtrl_ValidateServices(Cpa32U serviceMask,
 /*
  * Free all memory allocated for the QAT instance
  */
-void SalCtrl_QatClean(sal_qat_service_t *qat_instance)
+static void SalCtrl_QatClean(sal_qat_service_t *qat_instance)
 {
     LAC_OS_CAFREE(qat_instance->aeTargetIds);
     LAC_OS_CAFREE(qat_instance->qatAeMask);
