@@ -74,6 +74,7 @@
 #include "icp_platform.h"
 #include "adf_chr_drv.h"
 #include "adf_platform.h"
+#include "adf_ctl_drv.h"
 #include <linux/mutex.h>
 #include <linux/completion.h>
 #include <linux/sched/signal.h>
