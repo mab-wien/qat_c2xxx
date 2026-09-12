@@ -78,6 +78,7 @@
 #include "adf_platform.h"
 #include "adf_transport_ctrl.h"
 #include "adf_ETring_mgr.h"
+#include "adf_bh.h"
 
 
 /*
