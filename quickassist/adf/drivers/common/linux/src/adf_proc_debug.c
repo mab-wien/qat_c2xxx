@@ -204,7 +204,7 @@ static int adf_debug_open(struct inode *inode, struct file *file)
         }
 #else
         if (!ret) {
-                 ((struct seq_file *)file->private_data)->private = PDE_DATA(inode);
+                 ((struct seq_file *)file->private_data)->private = pde_data(inode);
         }
 #endif
         mutex_unlock(&proc_debug_lock);
@@ -215,12 +215,11 @@ static int adf_debug_open(struct inode *inode, struct file *file)
  * adf_debug_file_ops
  * File operations for the seq proc files
  */
-static struct file_operations adf_debug_file_ops = {
-        .owner   = THIS_MODULE,
-        .open    = adf_debug_open,
-        .read    = seq_read,
-        .llseek  = seq_lseek,
-        .release = seq_release
+static struct proc_ops adf_debug_file_ops = {
+        .proc_open    = adf_debug_open,
+        .proc_read    = seq_read,
+        .proc_lseek   = seq_lseek,
+        .proc_release = seq_release
 };
 
 /*
