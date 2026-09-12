@@ -82,6 +82,11 @@
  * This function stores the eSRAM information to the device's
  * internal configuration table.
  */
+extern CpaStatus adf_esramSetConfigInfo(icp_accel_dev_t *pAccelDev,
+                                 Cpa64U physAddr,
+                                 UARCH_INT virtAddr,
+                                 Cpa32U size);
+
 CpaStatus adf_esramSetConfigInfo(icp_accel_dev_t *pAccelDev,
                                  Cpa64U physAddr,
                                  UARCH_INT virtAddr,
