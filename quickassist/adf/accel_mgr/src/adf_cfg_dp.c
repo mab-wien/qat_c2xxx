@@ -74,6 +74,7 @@
 #include "icp_platform.h"
 #include "adf_cfg.h"
 #include "adf_cfg_types.h"
+#include "icp_adf_cfg_dp.h"
 
 /*
  * icp_adf_cfgGetSharedMemSize
