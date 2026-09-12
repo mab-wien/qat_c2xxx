@@ -599,7 +599,7 @@ STATIC int adf_request_msix_irq(icp_accel_dev_t *accel_dev)
  * adf_isr_alloc_msix_entry_table
  * Allocate buffer for MSIX entry value and name
  */
-int adf_isr_alloc_msix_entry_table(icp_accel_dev_t *accel_dev)
+static int adf_isr_alloc_msix_entry_table(icp_accel_dev_t *accel_dev)
 {
         adf_hw_device_data_t *hw_data = NULL;
         Cpa32U msix_num_entries = 0;
