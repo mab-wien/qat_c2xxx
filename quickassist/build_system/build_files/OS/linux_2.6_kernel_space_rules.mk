@@ -75,7 +75,7 @@ $(LIB_STATIC): dirs
 	$(MAKE) -C $(KERNEL_SOURCE_ROOT)/ M=$(PWD) obj-m=""; \
 	echo 'Copying outputs $(OBJ)';\
 	test -f lib.a  &&  (ar -t lib.a | xargs ar -rcsD $($(PROG_ACY)_FINAL_OUTPUT_DIR)/$(LIB_STATIC)); \
-	mv -f $(OBJ) $($(PROG_ACY)_FINAL_OUTPUT_DIR);\
+	for f in $(OBJ); do test -f "$$f" && mv -f "$$f" $($(PROG_ACY)_FINAL_OUTPUT_DIR); done; \
 	test -f built-in.o  &&  mv -f built-in.o $($(PROG_ACY)_FINAL_OUTPUT_DIR);\
 	test -f $($(PROG_ACY)_FINAL_OUTPUT_DIR)/lib.a  &&  mv $($(PROG_ACY)_FINAL_OUTPUT_DIR)/lib.a $($(PROG_ACY)_FINAL_OUTPUT_DIR)/$(LIB_STATIC);\
 	test -f $(OUTPUT_NAME).ko  &&  mv -f $(OUTPUT_NAME).ko $($(PROG_ACY)_FINAL_OUTPUT_DIR);\
@@ -86,7 +86,7 @@ $(MODULENAME): dirs
 	@echo 'Creating kernel module'; \
 	$(MAKE) -C $(KERNEL_SOURCE_ROOT)/ M=$(PWD); \
 	echo 'Copying outputs';\
-	mv -f $(OBJ) $($(PROG_ACY)_FINAL_OUTPUT_DIR);\
+	for f in $(OBJ); do test -f "$$f" && mv -f "$$f" $($(PROG_ACY)_FINAL_OUTPUT_DIR); done; \
 	test -f built-in.o  &&  mv -f built-in.o $($(PROG_ACY)_FINAL_OUTPUT_DIR);\
 	test -f lib.a  &&  mv lib.a $($(PROG_ACY)_FINAL_OUTPUT_DIR)/$(LIB_STATIC);\
 	test -f $(OUTPUT_NAME).ko  &&  mv -f $(OUTPUT_NAME).ko $($(PROG_ACY)_FINAL_OUTPUT_DIR);\
