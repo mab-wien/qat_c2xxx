@@ -81,6 +81,7 @@
 #include "adf_platform.h"
 #include "adf_ETring_ap.h"
 #include "adf_drv_sriov.h"
+#include "adf_drv.h"
 #include "adf_init.h"
 
 #define RESTARTING_MAX_LOOPS  1000
@@ -91,7 +92,7 @@ static struct workqueue_struct *ring_info_wq = NULL;
 #endif
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,35)
-static DEFINE_SEMAPHORE(ring_info_sema);
+static DEFINE_SEMAPHORE(ring_info_sema, 1);
 #else
 static DECLARE_MUTEX(ring_info_sema);
 #endif
@@ -653,6 +654,9 @@ void adf_disable_sriov(icp_accel_dev_t *accel_dev)
                 }
         }
 }
+
+extern int adf_init_sriov(void);
+extern void adf_exit_sriov(void);
 
 int adf_init_sriov(void)
 {
