@@ -211,6 +211,7 @@ osalZlibInflate(void *srcBufferList,
                            srcBuffList->pBuffers[srcBuffIdx].dataLenInBytes;
                    break;
                }
+               fallthrough;
            } /* Z_BUF_ERROR falls through on unrecoverable error */
            case Z_NEED_DICT:
            case Z_DATA_ERROR:
